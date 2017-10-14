@@ -7,10 +7,12 @@ player enjoys the game and emit every Journal update through a WebSocket to
 any connected clients that would like to listen for and react to these Journal
 updates.
 
-There is an example client included in the repo's [examples](/tree/master/examples/)
+There is an example client included in the repo's [examples](tree/master/examples/)
 directory.
 
-Currently, the server does not respond to any data sent by clients.
+Currently, the server does not respond to any data sent by clients, but in future iterations
+clients should be able to retrieve specific events from the Journal, all past events, etc.
+via a simple message to the Journal Server.
 
 ## Usage
 
