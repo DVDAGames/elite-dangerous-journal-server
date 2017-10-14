@@ -12,7 +12,13 @@ directory.
 
 Currently, the server does not respond to any data sent by clients.
 
-## Example
+## Usage
+
+### Getting Started
+
+```shell
+npm install --save elite-dangerous-journal-server
+```
 
 ### Server
 
