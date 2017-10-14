@@ -4,12 +4,12 @@ const ws = new WebSocket('ws://localhost:31337');
 
 const test = true;
 
-ws.on('open', function open() {
+ws.on('open', () => {
   // the server should ignore this
   ws.send(JSON.stringify({ test }));
 });
 
-ws.on('message', function incoming(data) {
+ws.on('message', (data) => {
   const eventData = JSON.parse(data);
 
   if (eventData.event === 'Fileheader') {
