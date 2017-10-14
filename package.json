@@ -1,0 +1,42 @@
+{
+  "name": "elite-dangerous-journal-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for broadcasting Elite: Dangerous Captain's Journal updates",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "dvdagames",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DVDAGames/elite-dangerous-journal-server.git"
+  },
+  "private": false,
+  "keywords": [
+    "elite: dangerous",
+    "elite dangerous",
+    "journal",
+    "elite",
+    "dangerous",
+    "ed"
+  ],
+  "bugs": {
+    "url": "https://github.com/DVDAGames/elite-dangerous-journal-server/issues"
+  },
+  "homepage": "https://github.com/DVDAGames/elite-dangerous-journal-server",
+  "dependencies": {
+    "chalk": "^2.1.0",
+    "chokidar": "^1.7.0",
+    "moment": "^2.19.1",
+    "node-dir": "^0.1.17",
+    "ws": "^3.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.9.0",
+    "eslint-config-airbnb": "^16.0.0",
+    "eslint-plugin-import": "^2.7.0",
+    "eslint-plugin-jsx-a11y": "^6.0.2",
+    "eslint-plugin-react": "^7.4.0"
+  }
+}
