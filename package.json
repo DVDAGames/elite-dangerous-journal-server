@@ -1,6 +1,6 @@
 {
   "name": "elite-dangerous-journal-server",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "WebSocket server for broadcasting Elite: Dangerous Captain's Journal updates",
   "main": "index.js",
   "scripts": {

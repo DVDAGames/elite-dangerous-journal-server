@@ -1,5 +1,7 @@
 # Elite: Dangerous Journal Server
 
+#### Version 1.0.2
+
 A simple WebSocket server for emiting Elite: Dangerous Journal Events.
 
 The basic idea of this project is to watch changes to the Journal file as the

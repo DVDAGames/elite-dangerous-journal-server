@@ -35,7 +35,7 @@ const JOURNAL_DIR = path.join(
   os.homedir(),
   'Saved Games',
   'Frontier Developments',
-  'Elite Dangerous',
+  'Elite Dangerous'
 );
 
 /**
