@@ -1,4 +1,4 @@
-# ed-journal-server
+# Elite: Dangerous Journal Server
 
 A simple WebSocket server for emiting Elite: Dangerous Journal Events.
 
@@ -47,3 +47,9 @@ socket.on('message', (data) => {
   }
 });
 ```
+
+## Acknowledgements
+
+- *Elite: Dangerous* is © 1984 - 2017 Frontier Developments plc.
+- [Elite: Dangerous Community Developers](https://edcd.github.io/)
+- [CMDR willyb321](https://github.com/willyb321) for some direction on the issues with watching the Journal file
