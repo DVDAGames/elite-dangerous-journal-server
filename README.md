@@ -26,7 +26,7 @@ by passing the desired event names as an Array to the server. There is an exampl
 ### Getting Started
 
 ```shell
-npm install --save elite-dangerous-journal-server
+npm install --save @dvdagames/elite-dangerous-journal-server
 ```
 
 ### Server
@@ -41,7 +41,7 @@ The server Class does not require any parameters, but has 3 optional ones:
 #### Basic Server Example
 
 ```javascript
-const EliteDangerousJournalServer = require('elite-dangerous-journal-server');
+const EliteDangerousJournalServer = require('@dvdagames/elite-dangerous-journal-server');
 
 const JournalServer = new EliteDangerousJournalServer();
 
@@ -51,7 +51,7 @@ JournalServer.init();
 #### Custom Port
 
 ```javascript
-const EliteDangerousJournalServer = require('elite-dangerous-journal-server');
+const EliteDangerousJournalServer = require('@dvdagames/elite-dangerous-journal-server');
 
 const port = 12345;
 
