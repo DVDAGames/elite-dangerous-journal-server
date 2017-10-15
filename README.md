@@ -1,6 +1,6 @@
 # Elite: Dangerous Journal Server
 
-#### Version 2.0.0
+#### Version 2.0.1
 
 A simple WebSocket server for emiting Elite: Dangerous Journal Events.
 
