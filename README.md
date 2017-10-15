@@ -94,11 +94,15 @@ which Journal Events the Journal Server will broadcast to them.
 The Journal Server `message` will have the following data:
 
 - **journalServer**: `String` the UUID of the Journal Server that sent the message
+- **serverVersion**: `String` the version number of the currently running Journal
+Server package
 - **journal**: `String` the name of the Journal file that is currently being used
 - **clientID**: `String` the UUID the Journal Server has assigned to this client
 - **subscribedTo**: `Array` the events that this client is subscribed to
-- **commander**: `String` the currently loaded CMDR name; `null` until `LoadGame` event
-- **payload**: `Object` the Journal Event that was triggered or the message from the Journal Server
+- **commander**: `String` the currently loaded CMDR name; `null` until `LoadGame`
+event
+- **payload**: `Object` the Journal Event that was triggered or the message from
+the Journal Server
 
 **NOTE**: The `payload` property will be an empty Object when clients update subscriptions
 and will be the following Object if the client sends an invalid message: `{ error: true }`.
