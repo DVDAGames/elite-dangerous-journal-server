@@ -1,6 +1,6 @@
 {
   "name": "elite-dangerous-journal-server",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "description": "WebSocket server for broadcasting Elite: Dangerous Captain's Journal updates",
   "main": "index.js",
   "scripts": {
@@ -28,8 +28,10 @@
   "dependencies": {
     "chalk": "^2.1.0",
     "chokidar": "^1.7.0",
+    "lodash": "^4.17.4",
     "moment": "^2.19.1",
     "node-dir": "^0.1.17",
+    "uuid": "^3.1.0",
     "ws": "^3.2.0"
   },
   "devDependencies": {

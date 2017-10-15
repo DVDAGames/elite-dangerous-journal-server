@@ -1,6 +1,6 @@
 # Elite: Dangerous Journal Server
 
-#### Version 1.0.2
+#### Version 2.0.0
 
 A simple WebSocket server for emiting Elite: Dangerous Journal Events.
 
@@ -12,9 +12,10 @@ updates.
 There is an example client included in the repo's [examples](https://github.com/DVDAGames/elite-dangerous-journal-server/tree/master/examples)
 directory.
 
-Currently, the server does not respond to any data sent by clients, but in future iterations
-clients should be able to retrieve specific events from the Journal, all past events, etc.
-via a simple message to the Journal Server.
+Currently, the server only allows the client to subscribe to specific events and
+does not perform any action with other data sent by clients. In future iterations
+clients should be able to retrieve specific events from the Journal, all past events,
+etc. via a simple message to the Journal Server similar to the subscription message.
 
 ## Usage
 
@@ -36,6 +37,8 @@ JournalServer.init();
 
 ### Client
 
+#### Basic Example
+
 ```javascript
 const WebSocket = require('ws');
 
@@ -44,11 +47,37 @@ const socket = new WebSocket('ws://localhost:31337');
 socket.on('message', (data) => {
   const eventData = JSON.parse(data);
 
-  if (eventData.event === 'Fileheader') {
-    console.log(`${eventData.timestamp} part ${eventData.part}`);
+  const { payload } = eventData;
+
+  if (payload.event === 'Fileheader') {
+    console.log(`${payload.timestamp} part ${payload.part}`);
   } else {
-    console.log(`${eventData.event} triggered`);
+    console.log(`${payload.event} triggered`);
   }
+});
+```
+
+#### Subscribing to Specific Events
+
+```javascript
+const WebSocket = require('ws');
+
+const socket = new WebSocket('ws://localhost:31337');
+
+socket.on('open', () => {
+  const type = 'subscribe';
+  const payload = ['DockingRequested', 'DockingGranted', 'Docked'];
+
+  // only subscribe to Docking Events
+  ws.send(JSON.stringify({ type, payload }));
+});
+
+socket.on('message', (data) => {
+  const eventData = JSON.parse(data);
+
+  const { payload } = eventData;
+
+  console.log(`CMDR: ${payload.event}`);
 });
 ```
 

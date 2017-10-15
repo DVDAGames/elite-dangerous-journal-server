@@ -10,6 +10,8 @@ const dir = require('node-dir');
 const chokidar = require('chokidar');
 const moment = require('moment');
 const chalk = require('chalk');
+const uuid = require('uuid/v1');
+const _ = require('lodash');
 
 /**
  * @constant JOURNAL_FILE_REGEX
@@ -38,6 +40,7 @@ const JOURNAL_DIR = path.join(
   'Elite Dangerous'
 );
 
+
 /**
  * @class EliteDangerousJournalServer
  * @desc Creates a WebSocket server that broadcasts Elite Dangerous Journal Events
@@ -47,19 +50,22 @@ class EliteDangerousJournalServer {
    * Creates an instance of EliteDangerousJournalServer.
    * @param {Number} [port=JOURNAL_SERVER_PORT] port to use for sockets
    * @param {String} [journalPath=JOURNAL_DIR] path to watch; should be the Journal directory
+   * @param {String} [id=uuid()] unique id for Journal Server
    * @memberof EliteDangerousJournalServer
    */
-  constructor(port = JOURNAL_SERVER_PORT, journalPath = JOURNAL_DIR) {
+  constructor(port = JOURNAL_SERVER_PORT, journalPath = JOURNAL_DIR, id = uuid()) {
     // start http server to attach our socket server to
     this.httpServer = http.createServer();
 
     // initialize class properties
+    this.id = id;
     this.port = port;
     this.journalPath = journalPath;
     this.currentLine = 0;
     this.journals = [];
     this.entries = [];
     this.currentHeader = {};
+    this.clientSubscriptions = {};
   }
 
   /**
@@ -74,6 +80,8 @@ class EliteDangerousJournalServer {
 
     // initialize WebSocket Server
     this.server = new WebSocket.Server(Object.assign({}, this.httpServer, { port }));
+
+    console.log(`${chalk.green('Journal Server')} ${chalk.blue(this.id)} ${chalk.green('created')}`);
 
     console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}`);
 
@@ -114,9 +122,12 @@ class EliteDangerousJournalServer {
     if (data) {
       // iterate through connected clients and send message to each one
       this.server.clients.forEach((client) => {
-        // make sure client is listening
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(this.formatDataForSocket(data));
+        const { readyState, journalServerUUID } = client;
+        // make sure client is listening and we have a Journal Server Client ID
+        if (readyState === WebSocket.OPEN && journalServerUUID) {
+          if (this.clientSubscriptions[journalServerUUID].indexOf('ALL') !== -1 || this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1) {
+            client.send(this.formatDataForSocket(data, client.journalServerUUID));
+          }
         }
       });
     }
@@ -128,17 +139,19 @@ class EliteDangerousJournalServer {
    * @returns {String}
    * @memberof EliteDangerousJournalServer
    */
-  formatDataForSocket(data) {
-    // initialize variable for storing modified data
-    let newData;
+  formatDataForSocket(payload, clientID) {
+    // header data for Journal Server payload
+    const journalServerHeaders = {
+      journalServer: this.id,
+      journal: path.basename(this.currentJournal),
+      subscribedTo: this.clientSubscriptions[clientID],
+      clientID,
+    };
 
-    // we can only send Strings so we need to convert non-Strings
-    if (typeof data !== 'String') {
-      newData = JSON.stringify(data);
-    }
-
-    // remove trailing whitespace
-    return newData.trim();
+    // we can only send Strings so we need to stringify
+    return JSON.stringify(
+      Object.assign({}, journalServerHeaders, { payload })
+    ).trim();
   }
 
   /**
@@ -182,8 +195,10 @@ class EliteDangerousJournalServer {
    */
   journalEvent(event, filepath) {
     // make sure we're seeing a change to our current Journal
-    if (event === 'change' && filepath === this.journals[0]) {
+    if (event === 'change' && filepath === this.currentJournal) {
       this.getJournalUpdate();
+    } else {
+      console.log(filepath);
     }
   }
 
@@ -223,22 +238,40 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   websocketConnection(ws) {
+    const clientID = uuid();
+
+    ws.journalServerUUID = clientID;
+
+    this.clientSubscriptions[clientID] = ['ALL'];
+
     // handle messages from the client
-    ws.on('message', (message) => {
-      // TODO: Decide what valid messages to handle and expose API
-      return false;
+    ws.on('message', (data) => {
+      const { type, payload } = JSON.parse(data);
+
+      if (type === 'subscribe' && payload) {
+        this.clientSubscriptions[clientID] = payload;
+
+        // send the client their subscription data
+        ws.send(this.formatDataForSocket({}, clientID));
+        console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('updated subscription')}`);
+      } else {
+        ws.send(this.formatDataForSocket({ error: true }, clientID));
+      }
     });
 
     // send the client the current header on successful connection
-    ws.send(this.formatDataForSocket(this.currentHeader));
+    ws.send(this.formatDataForSocket(this.currentHeader), clientID);
 
     // handle client disconnection
     ws.on('close', () => {
-      console.log(`${chalk.cyan('Client Disconnected from Web Socket.')}`);
+      // remove client subscriptions
+      this.clientSubscriptions = _.omit(clientID);
+
+      console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
       console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
     });
 
-    console.log(`${chalk.cyan('Client Connected via Web Socket.')}`);
+    console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('connected via Web Socket.')}`);
     console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
   }
 

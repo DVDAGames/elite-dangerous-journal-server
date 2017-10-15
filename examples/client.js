@@ -1,20 +1,47 @@
 const WebSocket = require('ws');
 
+// Journal Server connection
 const ws = new WebSocket('ws://localhost:31337');
 
-const test = true;
+// once we have successfully connect to our Journal Server
+ws.on('open', (...args) => {
+  console.log(args);
 
-ws.on('open', () => {
-  // the server should ignore this
-  ws.send(JSON.stringify({ test }));
+  // we want to subscribe
+  const type = 'subscribe';
+
+  // these are two easy events to see when starting up the Journal Server
+  // and the Elite: Dangerous game so that you don't have to work too hard to test
+  // successful subscriptions
+  const payload = ['Music', 'Fileheader'];
+
+  // the server update our subscriptions
+  ws.send(JSON.stringify({ type, payload }));
+
+  // the server should return an error for it's payload
+  ws.send(JSON.stringify({ testing: true }));
 });
 
-ws.on('message', (data) => {
+// Journal Server broadcast
+ws.on('message', () => {
+  // parse our stringified JSON
   const eventData = JSON.parse(data);
 
-  if (eventData.event === 'Fileheader') {
-    console.log(`${eventData.timestamp} part ${eventData.part}`);
+  // extract Journal payload from broadcast
+  const { payload } = eventData;
+
+  // if there was an error
+  if (payload.error) {
+    console.log('Journal Server Communication Error');
+
+    return false;
+  }
+
+  // new Journal file
+  if (payload.event === 'Fileheader') {
+    console.log(`${payload.timestamp} part ${payload.part}`);
+  // other event
   } else {
-    console.log(`${eventData.event} triggered`);
+    console.log(payload);
   }
 });
