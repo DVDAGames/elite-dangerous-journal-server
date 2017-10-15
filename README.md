@@ -21,6 +21,11 @@ Clients can subscribe to any of the Journal Events described in the
 [Journal Manual](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
 by passing the desired event names as an Array to the server. There is an example below.
 
+## Known Issues
+
+- [Watching stops after new Journal file is created](https://github.com/DVDAGames/elite-dangerous-journal-server/issues/1): this is 
+currently under investigation
+
 ## Usage
 
 ### Getting Started
