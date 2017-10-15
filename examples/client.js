@@ -37,7 +37,7 @@ ws.on('message', (data) => {
 
   // new Journal file
   if (payload.event === 'Fileheader') {
-    console.log(`${payload.timestamp} part ${payload.part}`);
+    console.log(`Journal: ${eventData.journal}`);
   // other event
   } else {
     console.log(eventData);

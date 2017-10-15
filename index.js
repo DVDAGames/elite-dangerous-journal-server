@@ -14,24 +14,23 @@ const uuid = require('uuid/v1');
 const _ = require('lodash');
 
 /**
- * @constant JOURNAL_FILE_REGEX
+ * RegEx to match against the Journal filename conventions used by E:D
  * @type {RegEx}
- * @desc RegEx to match against the Journal filename conventions used by E:D
+ * @constant
  */
 const JOURNAL_FILE_REGEX = /Journal\.\d*?\.\d*?\.log/;
 
 /**
- * @constant JOURNAL_SERVER_PORT
+ * Port to use for our WebSocket connections
  * @type {Number}
- * @desc Port to use for our WebSocket connections
- * @default
+ * @constant
  */
 const JOURNAL_SERVER_PORT = 31337;
 
 /**
- * @constant JOURNAL_DIR
+ * Path that E:D saves Journal files to
  * @type {String}
- * @desc Path that E:D saves Journal files to
+ * @constant
  */
 const JOURNAL_DIR = path.join(
   os.homedir(),
@@ -40,6 +39,12 @@ const JOURNAL_DIR = path.join(
   'Elite Dangerous'
 );
 
+/**
+ * Default Journal Event subscription list for clients
+ * @type {Array}
+ * @constant
+ */
+const DEFAULT_EVENT_SUBSCRIPTIONS = ['ALL'];
 
 /**
  * @class EliteDangerousJournalServer
@@ -54,9 +59,6 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   constructor(port = JOURNAL_SERVER_PORT, journalPath = JOURNAL_DIR, id = uuid()) {
-    // start http server to attach our socket server to
-    this.httpServer = http.createServer();
-
     // initialize class properties
     this.id = id;
     this.port = port;
@@ -66,6 +68,7 @@ class EliteDangerousJournalServer {
     this.entries = [];
     this.currentHeader = {};
     this.clientSubscriptions = {};
+    this.commander = null;
   }
 
   /**
@@ -78,6 +81,9 @@ class EliteDangerousJournalServer {
     // WebSocket.Server() options below
     const { port } = this;
 
+    // start http server to attach our socket server to
+    this.httpServer = http.createServer();
+
     // initialize WebSocket Server
     this.server = new WebSocket.Server(Object.assign({}, this.httpServer, { port }));
 
@@ -85,16 +91,8 @@ class EliteDangerousJournalServer {
 
     console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}`);
 
-    // start watching our Journal directory for modifications
-    this.journalWatcher = chokidar.watch(this.journalPath, {
-      // because of the way E:D writes to Journals, we need to use polling
-      usePolling: true,
-    });
-
-    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.journalPath)}`);
-
-    // set up our event handlers
-    this.bindEvents();
+    // index available Journal files
+    dir.files(this.journalPath, this.indexJournals.bind(this));
   }
 
   /**
@@ -107,9 +105,6 @@ class EliteDangerousJournalServer {
 
     // listen for socket connection
     this.server.on('connection', this.websocketConnection.bind(this));
-
-    // add broadcast method shorthand to this.server Object
-    this.server.broadcast = this.broadcastToSocketClients.bind(this);
   }
 
   /**
@@ -117,15 +112,21 @@ class EliteDangerousJournalServer {
    * @param {any} data the message to broadcast
    * @memberof EliteDangerousJournalServer
    */
-  broadcastToSocketClients(data) {
+  broadcast(data) {
     // make sure we were given a message
     if (data) {
+      console.log(`${chalk.gray('Emitting event')} ${chalk.green(data.event)}:${chalk.yellow(data.timestamp)}`);
+
       // iterate through connected clients and send message to each one
       this.server.clients.forEach((client) => {
         const { readyState, journalServerUUID } = client;
         // make sure client is listening and we have a Journal Server Client ID
         if (readyState === WebSocket.OPEN && this.clientSubscriptions[journalServerUUID]) {
-          if (this.clientSubscriptions[journalServerUUID].indexOf('ALL') !== -1 || this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1) {
+          // get string for ALL events
+          const [ALL_EVENTS] = DEFAULT_EVENT_SUBSCRIPTIONS;
+
+          // check subscription and emit event
+          if (this.clientSubscriptions[journalServerUUID].indexOf(ALL_EVENTS) !== -1 || this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1) {
             client.send(this.formatDataForSocket(data, client.journalServerUUID));
           }
         }
@@ -145,6 +146,7 @@ class EliteDangerousJournalServer {
       journalServer: this.id,
       journal: path.basename(this.currentJournal),
       subscribedTo: this.clientSubscriptions[clientID],
+      commander: this.commander,
       clientID,
     };
 
@@ -159,9 +161,6 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   watcherReady() {
-    // index available Journal files
-    dir.files(this.journalPath, this.indexJournals.bind(this));
-
     // watch for new Journal files
     this.journalWatcher.on('add', this.newJournalCreated.bind(this));
 
@@ -169,6 +168,9 @@ class EliteDangerousJournalServer {
     // because of the way content is appended by E:D we'll need to use 'raw'
     // instead of 'change'
     this.journalWatcher.on('raw', this.journalEvent.bind(this));
+
+    // retrieve content from the Journal to get header and seed our entries Array
+    this.getJournalContents();
   }
 
   /**
@@ -177,11 +179,24 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   newJournalCreated(journalPath) {
+    // reset current line position
+    this.currentLine = 0;
+
+    // stop watching old journal
+    this.journalWatcher.unwatch(this.currentJournal);
+
+    console.log(`${chalk.green('No longer emitting changes to')} ${chalk.magenta(this.currentJournal)}`);
+
     // add Journal path to start of Journals Array
     this.journals.unshift(journalPath);
 
     // make new Journal file the current Journal
     [this.currentJournal] = this.journals;
+
+    // stop watching old journal
+    this.journalWatcher.add(this.currentJournal);
+
+    console.log(`${chalk.green('Now emitting changes to')} ${chalk.magenta(this.currentJournal)}`);
 
     // retrieve Journal entries from the Journal file
     this.getJournalContents();
@@ -198,7 +213,7 @@ class EliteDangerousJournalServer {
     if (event === 'change' && filepath === this.currentJournal) {
       this.getJournalUpdate();
     } else {
-      console.log(filepath);
+      console.log(`${chalk.green('Filesystem event occured for')} ${chalk.magenta(filepath)}`);
     }
   }
 
@@ -242,7 +257,7 @@ class EliteDangerousJournalServer {
 
     ws.journalServerUUID = clientID;
 
-    this.clientSubscriptions[clientID] = ['ALL'];
+    this.clientSubscriptions[clientID] = DEFAULT_EVENT_SUBSCRIPTIONS;
 
     // handle messages from the client
     ws.on('message', (data) => {
@@ -304,27 +319,31 @@ class EliteDangerousJournalServer {
         const aDatestamp = moment(aFilenameArray[1], 'YYMMDDHHmmss');
         const bDatestamp = moment(bFilenameArray[1], 'YYMMDDHHmmss');
 
-        // if the datestamps are the same we'll need to compare parts
-        if (aDatestamp.isSame(bDatestamp)) {
-          const aPart = Number(aFilenameArray[2]);
-          const bPart = Number(bFilenameArray[2]);
-
-          // sort DESC by part number
-          return bPart - aPart;
+        // sort DESC by datestamp
+        if (bDatestamp.isAfter(aDatestamp)) {
+          return 1;
         }
 
-        // sort DESC by datestamp
-        return bDatestamp.isAfter(aDatestamp);
+        return -1;
       })
     ;
 
     // the first item in our Array should be our current journal
     [this.currentJournal] = this.journals;
 
-    // retrieve content from the Journal to get header and seed our entries Array
-    this.getJournalContents();
-
     console.log(`${chalk.green('Indexed Journals in')} ${chalk.magenta(this.journalPath)}`);
+
+    // start watching our Journal directory for modifications
+    this.journalWatcher = chokidar.watch([this.journalPath, this.currentJournal], {
+      // because of the way E:D writes to Journals, we need to use polling
+      usePolling: true,
+    });
+
+    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.journalPath)}`);
+    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.currentJournal)}`);
+
+    // set up our event handlers
+    this.bindEvents();
   }
 
   /**
@@ -341,8 +360,7 @@ class EliteDangerousJournalServer {
     // increment our line counter so we know our place in the Journal content
     this.currentLine = this.currentLine + 1;
 
-    console.log(`${chalk.cyan('Stored new Journal header')}`);
-    console.log(this.currentHeader);
+    console.log(`${chalk.green('Stored new Journal header for')} ${chalk.magenta(path.basename(this.currentJournal))}`);
 
     // return our headerless content
     return lines;
@@ -384,14 +402,21 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   addJournalEntry(entry) {
+    const formattedEntry = JSON.parse(entry);
+
     // add entry to our Array
-    this.entries.push(JSON.parse(entry));
+    this.entries.push(formattedEntry);
+
+    // get commander name from the LoadGame event
+    if (formattedEntry.event == 'LoadGame') {
+      this.commander = formattedEntry.Commander;
+    }
 
     // increment line coutner so we know where we are in the content
     this.currentLine = this.currentLine + 1;
 
     // broadcast entry to cleints
-    this.server.broadcast(JSON.parse(entry));
+    this.broadcast(JSON.parse(entry));
   }
 }
 
