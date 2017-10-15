@@ -4,9 +4,7 @@ const WebSocket = require('ws');
 const ws = new WebSocket('ws://localhost:31337');
 
 // once we have successfully connect to our Journal Server
-ws.on('open', (...args) => {
-  console.log(args);
-
+ws.on('open', () => {
   // we want to subscribe
   const type = 'subscribe';
 
@@ -23,7 +21,7 @@ ws.on('open', (...args) => {
 });
 
 // Journal Server broadcast
-ws.on('message', () => {
+ws.on('message', (data) => {
   // parse our stringified JSON
   const eventData = JSON.parse(data);
 
