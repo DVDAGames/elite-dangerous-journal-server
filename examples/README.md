@@ -1,6 +1,6 @@
 ## Journal Server Examples
 
-To run these examples:
+To run the most basic examples:
 
 1. Clone this repo and `cd` into it
 2. Run the following command in your Terminal:
@@ -18,3 +18,5 @@ node examples/client/index.js
 ```
 6. Run *Elite: Dangerous*
 7. Watch as the client responds to the Journal Events broadcast by the server
+
+**NOTE**: Each directory also has more advanced examples of Journal Server usage.

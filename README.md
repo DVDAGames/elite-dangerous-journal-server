@@ -1,8 +1,9 @@
 # Elite: Dangerous Journal Server
 
-#### Version 2.1.0
+#### Version 2.2.0
 
-A simple WebSocket server for emiting Elite: Dangerous Journal Events.
+A simple WebSocket server for emiting *Elite: Dangerous* Journal Events; it includes
+network discovery features so clients can easily find and connect to the server.
 
 The basic idea of this project is to watch changes to the Journal file as the
 player enjoys the game and emit every Journal update through a WebSocket to
@@ -31,12 +32,19 @@ npm install --save @dvdagames/elite-dangerous-journal-server
 
 ### Server
 
-The server Class does not require any parameters, but has 3 optional ones:
+The server Class does not require any parameters, but has an optional configuration
+Object:
 
-- `port`: \[*Number*\] listen for socket connections on a specific port; defaults to `31337`
-- `journalPath`: \[*String*\] path to Elite: Dangerous Journal directory; defaults to
+- **port**: `Number` listen for socket connections on a specific port; defaults to `31337`
+- **journalPath**: `String` path to Elite: Dangerous Journal directory; defaults to
 `~/Saved Games/Frontier Developments/Elite Dangerous/`
-- `id`: \[*String*\] unique identifier for this Journal Server; defaults to a generated UUID
+- **id**: `String` unique identifier for this Journal Server; defaults to a generated UUID
+- **serviceName**: `String` name for network discovery service; defaults to
+`Elite: Dangerous Journal Server`
+- **discovery**: `Boolean` should network discovery be enabled; defaults to `true`
+
+**NOTE**: If only providing a `port` you can just pass the `Number` into the constructor
+and don't need to provide a configuration Object.
 
 #### Basic Server Example
 
@@ -60,6 +68,24 @@ const JournalServer = new EliteDangerousJournalServer(port);
 JournalServer.init();
 ```
 
+#### Custom Config
+
+```javascript
+const EliteDangerousJournalServer = require('@dvdagames/elite-dangerous-journal-server');
+
+const port = 12345;
+
+const id = 'MY_UNIQUE_EDJS_ID';
+
+const serviceName = 'My EDJS Instance';
+
+const config = { port, id, serviceName };
+
+const JournalServer = new EliteDangerousJournalServer(config);
+
+JournalServer.init();
+```
+
 ### Client
 
 Each connected client will listen to all events by default, but clients can choose
@@ -67,12 +93,12 @@ which Journal Events the Journal Server will broadcast to them.
 
 The Journal Server `message` will have the following data:
 
-- `journalServer`: \[*String*\] the UUID of the Journal Server that sent the message
-- `journal`: \[*String*\] the name of the Journal file that is currently being used
-- `clientID`: \[*String*\] the UUID the Journal Server has assigned to this client
-- `subscribedTo`: \[*Array*\] the events that this client is subscribed to
-- `commander`: \[*String*\] the currently loaded CMDR name; `null` until `LoadGame` event
-- `payload`: \[*Object*\] the Journal Event that was triggered or the message from the Journal Server
+- **journalServer**: `String` the UUID of the Journal Server that sent the message
+- **journal**: `String` the name of the Journal file that is currently being used
+- **clientID**: `String` the UUID the Journal Server has assigned to this client
+- **subscribedTo**: `Array` the events that this client is subscribed to
+- **commander**: `String` the currently loaded CMDR name; `null` until `LoadGame` event
+- **payload**: `Object` the Journal Event that was triggered or the message from the Journal Server
 
 **NOTE**: The `payload` property will be an empty Object when clients update subscriptions
 and will be the following Object if the client sends an invalid message: `{ error: true }`.
@@ -131,6 +157,9 @@ for more information on utilizing Network Discovery in your client.
 ## Acknowledgements
 
 - *Elite: Dangerous* is © 1984 - 2017 Frontier Developments plc.
-- [Elite: Dangerous Community Developers](https://edcd.github.io/)
-- [CMDR willyb321](https://github.com/willyb321) for some direction on a few different issues I ran into
+- [Elite: Dangerous Community Developers](https://edcd.github.io/) for documentation
+and discussions
+- [CMDR willyb321](https://github.com/willyb321) for direction on a few different issues,
+including `fs.watch()` issues with the Journals and using Bonjour for Network Discovery
 - [Frontier Forums Elite: Dangerous Journal Discussion](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
+for providing some info about what's in these files and how they work

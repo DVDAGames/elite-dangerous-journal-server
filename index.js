@@ -5,6 +5,9 @@ const path = require('path');
 const http = require('http');
 const process = require('process');
 
+// package.json for version number and such
+const packageJSON = require('./package.json');
+
 // npm module imports
 const WebSocket = require('ws');
 const zeroconf = require('bonjour')();
@@ -48,12 +51,30 @@ const DEFAULT_EVENT_SUBSCRIPTIONS = ['ALL'];
  * Zeroconf/Bonjour service name
  * @type {String}
  */
-const SERVICE_NAME = 'Elite: Dangerous Journal Server';
+const JOURNAL_SERVER_SERVICE_NAME = 'Elite: Dangerous Journal Server';
 
 /**
  * Type of Zeroconf/Bonjour service we are publishing
+ * @type {String}
  */
-const SERVICE_TYPE = 'ws';
+const JOURNAL_SERVER_SERVICE_TYPE = 'ws';
+
+/**
+ * Name of Journal Event that first gives us the CMDR name
+ * @type {String}
+ */
+const EVENT_FOR_COMMANDER_NAME = 'LoadGame';
+
+/**
+ * Default configuration Object for our constructor
+ * @type {Object}
+ */
+const DEFAULT_CONFIG = {
+  port: JOURNAL_SERVER_PORT,
+  journalPath: JOURNAL_DIR,
+  serviceName: JOURNAL_SERVER_SERVICE_NAME,
+  discovery: true,
+};
 
 
 /**
@@ -63,16 +84,27 @@ const SERVICE_TYPE = 'ws';
 class EliteDangerousJournalServer {
   /**
    * Creates an instance of EliteDangerousJournalServer.
-   * @param {Number} [port=JOURNAL_SERVER_PORT] port to use for sockets
-   * @param {String} [journalPath=JOURNAL_DIR] path to watch; should be the Journal directory
-   * @param {String} [id=uuid()] unique id for Journal Server
+   * @param {Object} [config={}] Journal Server configuration
+   *  @param {Number} [config.port=JOURNAL_SERVER_PORT] port to use for sockets
+   *  @param {String} [config.journalPath=JOURNAL_DIR] path to watch; should be the Journal directory
+   *  @param {String} [config.id=uuid()] unique id for Journal Server
+   *  @param {String} [config.serviceName=JOURNAL_SERVER_SERVICE_NAME] name for Bonjour service
+   *  @param {Boolean} [config.discovery=true] enable/disable network discovery
    * @memberof EliteDangerousJournalServer
    */
-  constructor(port = JOURNAL_SERVER_PORT, journalPath = JOURNAL_DIR, id = uuid()) {
+  constructor(config = {}) {
+    // merge provided config with default config
+    this.config = Object.assign(
+      {},
+      DEFAULT_CONFIG,
+      { id: uuid() },
+      // if we were given just a number, we'll use that as our port
+      (
+        (_.isNumber(config)) ? { port: config } : config
+      )
+    );
+
     // initialize class properties
-    this.id = id;
-    this.port = port;
-    this.journalPath = journalPath;
     this.currentLine = 0;
     this.journals = [];
     this.entries = [];
@@ -86,35 +118,46 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   init() {
-    console.log(`${chalk.grey('Hello')}`);
+    // store start time for uptime calculations
+    this.creation = moment();
 
-    // get the port and id from our initialization
+    console.log(`${chalk.gray(`Wecome to ${this.config.serviceName} version ${packageJSON.version}`)}`);
+
+    // get port, id, serviceName, discovery, and journalPath from our config
     // destructuring them here just allows us to use the Object shorthand in our
     // WebSocket.Server() and bonjour options
-    const { port, id } = this;
+    const {
+      port,
+      id,
+      serviceName,
+      discovery,
+      journalPath,
+    } = this.config;
 
     // start http server to attach our socket server to
     this.httpServer = http.createServer();
 
-    console.log(`${chalk.green('Journal Server')} ${chalk.blue(this.id)} ${chalk.green('created')}`);
+    console.log(`${chalk.green('Journal Server')} ${chalk.blue(id)} ${chalk.green(`created on ${this.creation.format('YYYY-MM-DD HH:mm:ss')}`)}`);
 
     // initialize WebSocket Server
     this.server = new WebSocket.Server(Object.assign({}, this.httpServer, { port }));
 
     console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
 
-    // publish service for discovery
-    this.discovery = zeroconf.publish({
-      name: SERVICE_NAME,
-      type: SERVICE_TYPE,
-      txt: { id },
-      port,
-    });
+    if (discovery) {
+      // publish service for discovery
+      this.discovery = zeroconf.publish({
+        name: serviceName,
+        type: JOURNAL_SERVER_SERVICE_TYPE,
+        txt: { id, version: packageJSON.version },
+        port,
+      });
 
-    console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(SERVICE_NAME)} ${chalk.green('for discovery...')}`);
+      console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(serviceName)} ${chalk.green('for discovery...')}`);
+    }
 
     // index available Journal files
-    dir.files(this.journalPath, this.indexJournals.bind(this));
+    dir.files(journalPath, this.indexJournals.bind(this));
   }
 
   /**
@@ -132,31 +175,59 @@ class EliteDangerousJournalServer {
     process.on('SIGINT', this.shutdown.bind(this));
   }
 
+  /**
+   * responds to process kill and gracefully shuts down
+   * @memberof EliteDangerousJournalServer
+   */
   shutdown() {
-    console.log(`${chalk.red('Server shutting down...')}`);
+    console.log(`${chalk.red('Journal Server shutting down...')}`);
 
+    // check to see if we need to unpublish network discovery service
+    if (this.config.discovery) {
+      this.shutdownWithDiscovery();
+    } else {
+      this.shutdownWithoutDiscovery();
+    }
+  }
+
+  /**
+   * unpublishes our discoverable service
+   * @memberof EliteDangerousJournalServer
+   */
+  shutdownWithDiscovery() {
     // turn off discovery
     zeroconf.unpublishAll(() => {
       // destroy service
       zeroconf.destroy();
 
-      console.log(`${chalk.grey('Unpublishing discovery service...')}`);
+      console.log(`${chalk.gray('Unpublishing discovery service...')}`);
 
-      // destroy WebSocket Server
-      this.server.close();
-
-      console.log(`${chalk.grey('Muting Web Socket listener...')}`);
-
-      // destroy http server
-      this.httpServer.close();
-
-      console.log(`${chalk.grey('Shutting down server...')}`);
-
-      console.log(`${chalk.grey('Good bye')}`);
-
-      // end execution
-      process.exit();
+      // continue with rest of shutdown procedure
+      this.shutdownWithoutDiscovery();
     });
+  }
+
+  /**
+   * close server connections and exit
+   * @memberof EliteDangerousJournalServer
+   */
+  shutdownWithoutDiscovery() {
+    // destroy WebSocket Server
+    this.server.close();
+    
+    console.log(`${chalk.gray('Muting Web Socket listener...')}`);
+
+    // destroy http server
+    this.httpServer.close();
+
+    console.log(`${chalk.gray('Shutting down HTTP server...')}`);
+
+    console.log(`${chalk.gray(`Server uptime was ${moment().diff(this.creation, 'hours')} hours`)}`);
+
+    console.log(`${chalk.gray('Good bye')}`);
+
+    // end execution
+    process.exit();
   }
 
   /**
@@ -195,11 +266,12 @@ class EliteDangerousJournalServer {
   formatDataForSocket(payload, clientID) {
     // header data for Journal Server payload
     const journalServerHeaders = {
-      journalServer: this.id,
+      journalServer: this.config.id,
       journal: path.basename(this.currentJournal),
       subscribedTo: this.clientSubscriptions[clientID],
       commander: this.commander,
       clientID,
+      serverVersion: packageJSON.version,
     };
 
     // we can only send Strings so we need to stringify
@@ -351,7 +423,7 @@ class EliteDangerousJournalServer {
   indexJournals(error, files) {
     // if we can't index any files
     if (error) {
-      console.log(`${chalk.red('Could not find Journals in')} ${chalk.magenta(this.journalPath)}`);
+      console.log(`${chalk.red('Could not find Journals in')} ${chalk.magenta(this.config.journalPath)}`);
       throw error;
     }
 
@@ -383,15 +455,15 @@ class EliteDangerousJournalServer {
     // the first item in our Array should be our current journal
     [this.currentJournal] = this.journals;
 
-    console.log(`${chalk.green('Indexed Journals in')} ${chalk.magenta(this.journalPath)}`);
+    console.log(`${chalk.green('Indexed Journals in')} ${chalk.magenta(this.config.journalPath)}`);
 
     // start watching our Journal directory for modifications
-    this.journalWatcher = chokidar.watch([this.journalPath, this.currentJournal], {
+    this.journalWatcher = chokidar.watch([this.config.journalPath, this.currentJournal], {
       // because of the way E:D writes to Journals, we need to use polling
       usePolling: true,
     });
 
-    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.journalPath)}`);
+    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.config.journalPath)}`);
     console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.currentJournal)}`);
 
     // set up our event handlers
@@ -460,7 +532,7 @@ class EliteDangerousJournalServer {
     this.entries.push(formattedEntry);
 
     // get commander name from the LoadGame event
-    if (formattedEntry.event == 'LoadGame') {
+    if (formattedEntry.event === EVENT_FOR_COMMANDER_NAME) {
       this.commander = formattedEntry.Commander;
     }
 
