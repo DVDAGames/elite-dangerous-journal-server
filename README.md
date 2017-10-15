@@ -17,6 +17,10 @@ does not perform any action with other data sent by clients. In future iteration
 clients should be able to retrieve specific events from the Journal, all past events,
 etc. via a simple message to the Journal Server similar to the subscription message.
 
+Clients can subscribe to any of the Journal Events described in the
+[Journal Manual](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
+by passing the desired event names as an Array to the server. There is an example below.
+
 ## Usage
 
 ### Getting Started
@@ -27,6 +31,15 @@ npm install --save elite-dangerous-journal-server
 
 ### Server
 
+The server Class does not require any parameters, but has 3 optional ones:
+
+- `port`: listen for socket connections on a specific port; defaults to `31337`
+- `journalPath`: path to Elite: Dangerous Journal directory; defaults to
+`~/Saved Games/Frontier Developments/Elite Dangerous/`
+- `id`: unique identifier for this Journal Server; defaults to a generated UUID
+
+#### Basic Server Example
+
 ```javascript
 const EliteDangerousJournalServer = require('elite-dangerous-journal-server');
 
@@ -35,7 +48,33 @@ const JournalServer = new EliteDangerousJournalServer();
 JournalServer.init();
 ```
 
+#### Custom Port
+
+```javascript
+const EliteDangerousJournalServer = require('elite-dangerous-journal-server');
+
+const port = 12345;
+
+const JournalServer = new EliteDangerousJournalServer(port);
+
+JournalServer.init();
+```
+
 ### Client
+
+Each connected client will listen to all events by default, but clients can choose
+which Journal Events the Journal Server will broadcast to them.
+
+The Journal Server `message` will have the following data:
+
+- `journalServer`: the UUID of the Journal Server that sent the message
+- `journal`: the name of the Journal file that is currently being used
+- `clientID`: the UUID the Journal Server has assigned to this client
+- `subscribedTo`: the Array of events that this client is subscribed to
+- `payload`: the Journal Event that was triggered or the message from the Journal Server
+
+**NOTE**: The `payload` property will be an empty Object when clients update subscriptions
+and will be the following Object if the client sends an invalid message: `{ error: true }`.
 
 #### Basic Example
 
@@ -57,7 +96,7 @@ socket.on('message', (data) => {
 });
 ```
 
-#### Subscribing to Specific Events
+#### Subscribing to Specific Journal Events
 
 ```javascript
 const WebSocket = require('ws');

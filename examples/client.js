@@ -40,6 +40,6 @@ ws.on('message', (data) => {
     console.log(`${payload.timestamp} part ${payload.part}`);
   // other event
   } else {
-    console.log(payload);
+    console.log(eventData);
   }
 });

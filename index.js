@@ -124,7 +124,7 @@ class EliteDangerousJournalServer {
       this.server.clients.forEach((client) => {
         const { readyState, journalServerUUID } = client;
         // make sure client is listening and we have a Journal Server Client ID
-        if (readyState === WebSocket.OPEN && journalServerUUID) {
+        if (readyState === WebSocket.OPEN && this.clientSubscriptions[journalServerUUID]) {
           if (this.clientSubscriptions[journalServerUUID].indexOf('ALL') !== -1 || this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1) {
             client.send(this.formatDataForSocket(data, client.journalServerUUID));
           }
