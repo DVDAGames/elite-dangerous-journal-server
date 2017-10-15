@@ -21,11 +21,6 @@ Clients can subscribe to any of the Journal Events described in the
 [Journal Manual](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
 by passing the desired event names as an Array to the server. There is an example below.
 
-## Known Issues
-
-- [Watching stops after new Journal file is created](https://github.com/DVDAGames/elite-dangerous-journal-server/issues/1): this is 
-currently under investigation
-
 ## Usage
 
 ### Getting Started
@@ -38,10 +33,10 @@ npm install --save elite-dangerous-journal-server
 
 The server Class does not require any parameters, but has 3 optional ones:
 
-- `port`: listen for socket connections on a specific port; defaults to `31337`
-- `journalPath`: path to Elite: Dangerous Journal directory; defaults to
+- `port`: \[*Number*\] listen for socket connections on a specific port; defaults to `31337`
+- `journalPath`: \[*String*\] path to Elite: Dangerous Journal directory; defaults to
 `~/Saved Games/Frontier Developments/Elite Dangerous/`
-- `id`: unique identifier for this Journal Server; defaults to a generated UUID
+- `id`: \[*String*\] unique identifier for this Journal Server; defaults to a generated UUID
 
 #### Basic Server Example
 
@@ -132,3 +127,4 @@ socket.on('message', (data) => {
 - *Elite: Dangerous* is © 1984 - 2017 Frontier Developments plc.
 - [Elite: Dangerous Community Developers](https://edcd.github.io/)
 - [CMDR willyb321](https://github.com/willyb321) for some direction on the issues with watching the Journal file
+- [Frontier Forums Elite: Dangerous Journal Discussion](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
