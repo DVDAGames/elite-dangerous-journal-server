@@ -3,9 +3,11 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const process = require('process');
 
 // npm module imports
 const WebSocket = require('ws');
+const zeroconf = require('bonjour')();
 const dir = require('node-dir');
 const chokidar = require('chokidar');
 const moment = require('moment');
@@ -16,21 +18,18 @@ const _ = require('lodash');
 /**
  * RegEx to match against the Journal filename conventions used by E:D
  * @type {RegEx}
- * @constant
  */
 const JOURNAL_FILE_REGEX = /Journal\.\d*?\.\d*?\.log/;
 
 /**
  * Port to use for our WebSocket connections
  * @type {Number}
- * @constant
  */
 const JOURNAL_SERVER_PORT = 31337;
 
 /**
  * Path that E:D saves Journal files to
  * @type {String}
- * @constant
  */
 const JOURNAL_DIR = path.join(
   os.homedir(),
@@ -42,9 +41,20 @@ const JOURNAL_DIR = path.join(
 /**
  * Default Journal Event subscription list for clients
  * @type {Array}
- * @constant
  */
 const DEFAULT_EVENT_SUBSCRIPTIONS = ['ALL'];
+
+/**
+ * Zeroconf/Bonjour service name
+ * @type {String}
+ */
+const SERVICE_NAME = 'Elite: Dangerous Journal Server';
+
+/**
+ * Type of Zeroconf/Bonjour service we are publishing
+ */
+const SERVICE_TYPE = 'ws';
+
 
 /**
  * @class EliteDangerousJournalServer
@@ -76,20 +86,32 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   init() {
-    // get the port from our initialization
-    // destructuring it here just allows us to use the Object shorthand in our
-    // WebSocket.Server() options below
-    const { port } = this;
+    console.log(`${chalk.grey('Hello')}`);
+
+    // get the port and id from our initialization
+    // destructuring them here just allows us to use the Object shorthand in our
+    // WebSocket.Server() and bonjour options
+    const { port, id } = this;
 
     // start http server to attach our socket server to
     this.httpServer = http.createServer();
 
+    console.log(`${chalk.green('Journal Server')} ${chalk.blue(this.id)} ${chalk.green('created')}`);
+
     // initialize WebSocket Server
     this.server = new WebSocket.Server(Object.assign({}, this.httpServer, { port }));
 
-    console.log(`${chalk.green('Journal Server')} ${chalk.blue(this.id)} ${chalk.green('created')}`);
+    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
 
-    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}`);
+    // publish service for discovery
+    this.discovery = zeroconf.publish({
+      name: SERVICE_NAME,
+      type: SERVICE_TYPE,
+      txt: { id },
+      port,
+    });
+
+    console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(SERVICE_NAME)} ${chalk.green('for discovery...')}`);
 
     // index available Journal files
     dir.files(this.journalPath, this.indexJournals.bind(this));
@@ -105,6 +127,36 @@ class EliteDangerousJournalServer {
 
     // listen for socket connection
     this.server.on('connection', this.websocketConnection.bind(this));
+
+    // listen for process kill
+    process.on('SIGINT', this.shutdown.bind(this));
+  }
+
+  shutdown() {
+    console.log(`${chalk.red('Server shutting down...')}`);
+
+    // turn off discovery
+    zeroconf.unpublishAll(() => {
+      // destroy service
+      zeroconf.destroy();
+
+      console.log(`${chalk.grey('Unpublishing discovery service...')}`);
+
+      // destroy WebSocket Server
+      this.server.close();
+
+      console.log(`${chalk.grey('Muting Web Socket listener...')}`);
+
+      // destroy http server
+      this.httpServer.close();
+
+      console.log(`${chalk.grey('Shutting down server...')}`);
+
+      console.log(`${chalk.grey('Good bye')}`);
+
+      // end execution
+      process.exit();
+    });
   }
 
   /**

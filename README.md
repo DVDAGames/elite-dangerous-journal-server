@@ -1,6 +1,6 @@
 # Elite: Dangerous Journal Server
 
-#### Version 2.0.1
+#### Version 2.1.0
 
 A simple WebSocket server for emiting Elite: Dangerous Journal Events.
 
@@ -122,9 +122,15 @@ socket.on('message', (data) => {
 });
 ```
 
+#### Network Discovery
+
+This is more advanced topic, please see the [discovery.js example](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/examples/client/discovery.js)
+for more information on utilizing Network Discovery in your client.
+
+
 ## Acknowledgements
 
 - *Elite: Dangerous* is © 1984 - 2017 Frontier Developments plc.
 - [Elite: Dangerous Community Developers](https://edcd.github.io/)
-- [CMDR willyb321](https://github.com/willyb321) for some direction on the issues with watching the Journal file
+- [CMDR willyb321](https://github.com/willyb321) for some direction on a few different issues I ran into
 - [Frontier Forums Elite: Dangerous Journal Discussion](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)

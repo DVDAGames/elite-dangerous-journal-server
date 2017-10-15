@@ -9,12 +9,12 @@ npm install
 ```
 3. Run the following command in your Terminal:
 ```shell
-node examples/server.js
+node examples/server/index.js
 ```
 4. Open another Terminal
 5. Run the following command in your second Terminal:
 ```shell
-node examples/client.js
+node examples/client/index.js
 ```
 6. Run *Elite: Dangerous*
 7. Watch as the client responds to the Journal Events broadcast by the server

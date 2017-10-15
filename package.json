@@ -1,6 +1,6 @@
 {
   "name": "@dvdagames/elite-dangerous-journal-server",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "WebSocket server for broadcasting Elite: Dangerous Captain's Journal updates",
   "main": "index.js",
   "scripts": {
@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/DVDAGames/elite-dangerous-journal-server",
   "dependencies": {
+    "bonjour": "^3.5.0",
     "chalk": "^2.1.0",
     "chokidar": "^1.7.0",
     "lodash": "^4.17.4",
