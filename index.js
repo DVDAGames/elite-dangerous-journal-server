@@ -64,6 +64,12 @@ const JOURNAL_SERVER_SERVICE_TYPE = 'ws';
 const EVENT_FOR_COMMANDER_NAME = 'LoadGame';
 
 /**
+ * Time to pass to watcher for polling interval
+ * @type {Number}
+ */
+const JOURNAL_WATCH_INTERVAL = 100;
+
+/**
  * Default configuration Object for our constructor
  * @type {Object}
  */
@@ -73,6 +79,7 @@ const DEFAULT_CONFIG = {
   serviceName: JOURNAL_SERVER_SERVICE_NAME,
   discovery: true,
   headers: {},
+  interval: JOURNAL_WATCH_INTERVAL,
 };
 
 
@@ -464,10 +471,14 @@ class EliteDangerousJournalServer {
 
     console.log(`${chalk.green('Indexed Journals in')} ${chalk.magenta(this.config.journalPath)}`);
 
+    // get polling interval
+    const { interval } = this.config;
+
     // start watching our Journal directory for modifications
     this.journalWatcher = chokidar.watch([this.config.journalPath, this.currentJournal], {
       // because of the way E:D writes to Journals, we need to use polling
       usePolling: true,
+      interval,
     });
 
     console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.config.journalPath)}`);

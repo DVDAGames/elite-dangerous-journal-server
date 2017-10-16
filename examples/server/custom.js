@@ -10,12 +10,14 @@ const id = uuid(UUID_NAMESPACE, uuid.URL);
 const headers = {
   TESTING: true,
 };
+const interval = 1000;
 
 const config = {
   port,
   serviceName,
   id,
   headers,
+  interval,
 };
 
 const JournalServer = new EliteDangerousJournalServer(config);

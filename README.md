@@ -1,6 +1,7 @@
+
 # Elite: Dangerous Journal Server
 
-#### Version 2.3.0
+#### Version 2.4.0
 
 A simple WebSocket server for emiting *Elite: Dangerous* Journal Events; it includes
 network discovery features so clients can easily find and connect to the server.
@@ -21,6 +22,18 @@ etc. via a simple message to the Journal Server similar to the subscription mess
 Clients can subscribe to any of the Journal Events described in the
 [Journal Manual](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
 by passing the desired event names as an Array to the server. There is an example below.
+
+
+## Contributors
+
+Check out the [guide to contributing](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CONTRIBUTING.md)
+if you'd like to be a [contributor](https://github.com/DVDAGames/elite-dangerous-journal-server/graphs/contributor).
+
+
+## Changelog
+
+Check out the [CHANGELOG](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CHANGELOG.md) for details.
+
 
 ## Usage
 
@@ -165,10 +178,6 @@ socket.on('message', (data) => {
 This is more advanced topic, please see the [discovery.js example](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/examples/client/discovery.js)
 for more information on utilizing Network Discovery in your client.
 
-## Contributors
-
-Check out the [guide to contributing](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CONTRIBUTING.md)
-if you'd like to be a [contributor](https://github.com/DVDAGames/elite-dangerous-journal-server/graphs/contributor).
 
 ## Acknowledgements
 
