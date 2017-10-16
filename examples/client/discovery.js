@@ -1,3 +1,5 @@
+/* eslint no-console: 0 */
+
 const WebSocket = require('ws');
 const zeroconf = require('bonjour')();
 
@@ -25,7 +27,14 @@ discovery.on('up', (server) => {
   // check to see if this is the serivce we are loking for
   if (server.name === SERVICE_NAME) {
     // get relevant info from Service
-    const { addresses, type, port, txt: { id } } = server;
+    const {
+      addresses,
+      type,
+      port,
+      txt: {
+        id,
+      },
+    } = server;
 
     // we're going to want to connect via ipv4 for this one
     const ipv4RegEx = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/;

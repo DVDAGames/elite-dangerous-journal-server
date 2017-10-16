@@ -1,3 +1,5 @@
+/* eslint no-console: 0 */
+
 const WebSocket = require('ws');
 
 // Journal Server connection

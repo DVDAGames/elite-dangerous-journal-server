@@ -1,6 +1,6 @@
 # Elite: Dangerous Journal Server
 
-#### Version 2.2.0
+#### Version 2.3.0
 
 A simple WebSocket server for emiting *Elite: Dangerous* Journal Events; it includes
 network discovery features so clients can easily find and connect to the server.
@@ -42,9 +42,16 @@ Object:
 - **serviceName**: `String` name for network discovery service; defaults to
 `Elite: Dangerous Journal Server`
 - **discovery**: `Boolean` should network discovery be enabled; defaults to `true`
+- **headers**: `Object` an optional Object of headers you'd like added to the broadcast;
+these properties will exist in the broadcast data outside of the `payload` property which
+will contain the Journal Event.
 
 **NOTE**: If only providing a `port` you can just pass the `Number` into the constructor
 and don't need to provide a configuration Object.
+
+**NOTE**: If the `headers` property contains any of the default header properties
+that the Journal Server already plans to send, those headers will be overwritten by
+the default headers.
 
 #### Basic Server Example
 
@@ -74,12 +81,13 @@ JournalServer.init();
 const EliteDangerousJournalServer = require('@dvdagames/elite-dangerous-journal-server');
 
 const port = 12345;
-
 const id = 'MY_UNIQUE_EDJS_ID';
-
 const serviceName = 'My EDJS Instance';
+const headers = {
+  TEST: true
+};
 
-const config = { port, id, serviceName };
+const config = { port, id, serviceName, headers };
 
 const JournalServer = new EliteDangerousJournalServer(config);
 
@@ -91,7 +99,7 @@ JournalServer.init();
 Each connected client will listen to all events by default, but clients can choose
 which Journal Events the Journal Server will broadcast to them.
 
-The Journal Server `message` will have the following data:
+The Journal Server broadcast will have the following data:
 
 - **journalServer**: `String` the UUID of the Journal Server that sent the message
 - **serverVersion**: `String` the version number of the currently running Journal
@@ -116,9 +124,9 @@ const WebSocket = require('ws');
 const socket = new WebSocket('ws://localhost:31337');
 
 socket.on('message', (data) => {
-  const eventData = JSON.parse(data);
+  const broadcast = JSON.parse(data);
 
-  const { payload } = eventData;
+  const { payload } = broadcast;
 
   if (payload.event === 'Fileheader') {
     console.log(`${payload.timestamp} part ${payload.part}`);
@@ -144,9 +152,9 @@ socket.on('open', () => {
 });
 
 socket.on('message', (data) => {
-  const eventData = JSON.parse(data);
+  const broadcast = JSON.parse(data);
 
-  const { payload } = eventData;
+  const { payload } = broadcast;
 
   console.log(`CMDR: ${payload.event}`);
 });

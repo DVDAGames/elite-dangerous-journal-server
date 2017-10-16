@@ -1,3 +1,5 @@
+/* eslint no-console: 0 */
+
 const WebSocket = require('ws');
 
 // Journal Server connection
@@ -16,8 +18,8 @@ ws.on('open', () => {
   ws.send(JSON.stringify({ type: eventType, payload }));
 
   // the server should return an error for it's payload
-  socket.send(JSON.stringify({ testing: true }));
-})
+  ws.send(JSON.stringify({ testing: true }));
+});
 
 // Journal Server broadcast
 ws.on('message', (data) => {

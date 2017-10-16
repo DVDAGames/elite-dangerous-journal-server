@@ -1,3 +1,5 @@
+/* eslint no-console: 0 */
+
 // Node imports
 const os = require('os');
 const fs = require('fs');
@@ -18,6 +20,7 @@ const chalk = require('chalk');
 const uuid = require('uuid/v1');
 const _ = require('lodash');
 
+
 /**
  * RegEx to match against the Journal filename conventions used by E:D
  * @type {RegEx}
@@ -34,12 +37,7 @@ const JOURNAL_SERVER_PORT = 31337;
  * Path that E:D saves Journal files to
  * @type {String}
  */
-const JOURNAL_DIR = path.join(
-  os.homedir(),
-  'Saved Games',
-  'Frontier Developments',
-  'Elite Dangerous'
-);
+const JOURNAL_DIR = path.join(os.homedir(), 'Saved Games', 'Frontier Developments', 'Elite Dangerous');
 
 /**
  * Default Journal Event subscription list for clients
@@ -74,6 +72,7 @@ const DEFAULT_CONFIG = {
   journalPath: JOURNAL_DIR,
   serviceName: JOURNAL_SERVER_SERVICE_NAME,
   discovery: true,
+  headers: {},
 };
 
 
@@ -86,23 +85,22 @@ class EliteDangerousJournalServer {
    * Creates an instance of EliteDangerousJournalServer.
    * @param {Object} [config={}] Journal Server configuration
    *  @param {Number} [config.port=JOURNAL_SERVER_PORT] port to use for sockets
-   *  @param {String} [config.journalPath=JOURNAL_DIR] path to watch; should be the Journal directory
+   *  @param {String} [config.journalPath=JOURNAL_DIR] path to watch; should be Journal directory
    *  @param {String} [config.id=uuid()] unique id for Journal Server
    *  @param {String} [config.serviceName=JOURNAL_SERVER_SERVICE_NAME] name for Bonjour service
    *  @param {Boolean} [config.discovery=true] enable/disable network discovery
+   *  @param {Object} [config.headers={}] custom headers to merge with our broadcast headers
    * @memberof EliteDangerousJournalServer
    */
   constructor(config = {}) {
+    // generate UUID for server
+    const idObj = { id: uuid() };
+
+    // if only a port was provided, create an Object we can use to merge
+    const mergeConfig = (_.isNumber(config)) ? { port: config } : config;
+
     // merge provided config with default config
-    this.config = Object.assign(
-      {},
-      DEFAULT_CONFIG,
-      { id: uuid() },
-      // if we were given just a number, we'll use that as our port
-      (
-        (_.isNumber(config)) ? { port: config } : config
-      )
-    );
+    this.config = Object.assign({}, DEFAULT_CONFIG, idObj, mergeConfig);
 
     // initialize class properties
     this.currentLine = 0;
@@ -248,8 +246,14 @@ class EliteDangerousJournalServer {
           // get string for ALL events
           const [ALL_EVENTS] = DEFAULT_EVENT_SUBSCRIPTIONS;
 
+          // is the client subscribed to all broadcasts?
+          const allSubbed = this.clientSubscriptions[journalServerUUID].indexOf(ALL_EVENTS) !== -1;
+
+          // is the client subscribed to this broadcast?
+          const thisSubbed = this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1;
+
           // check subscription and emit event
-          if (this.clientSubscriptions[journalServerUUID].indexOf(ALL_EVENTS) !== -1 || this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1) {
+          if (allSubbed || thisSubbed) {
             client.send(this.formatDataForSocket(data, client.journalServerUUID));
           }
         }
@@ -274,10 +278,10 @@ class EliteDangerousJournalServer {
       serverVersion: packageJSON.version,
     };
 
+    const send = Object.assign({}, this.config.headers, journalServerHeaders, { payload });
+
     // we can only send Strings so we need to stringify
-    return JSON.stringify(
-      Object.assign({}, journalServerHeaders, { payload })
-    ).trim();
+    return JSON.stringify(send).trim();
   }
 
   /**
@@ -349,11 +353,9 @@ class EliteDangerousJournalServer {
   readJournalFileContents() {
     // get the JSON-lines data from the Journal file
     // TODO: Find a better way to do this without having to read whole file
-    return fs
-      .readFileSync(this.journals[0], 'utf-8')
-      .split('\n')
-      .filter(item => item.trim())
-    ;
+    const lines = fs.readFileSync(this.journals[0], 'utf-8').split('\n');
+
+    return lines.filter(item => item.trim());
   }
 
   /**
@@ -377,10 +379,16 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   websocketConnection(ws) {
+    // generate id for client connection
     const clientID = uuid();
 
-    ws.journalServerUUID = clientID;
+    // get refernce to socket to satisfy eslint rules about assigning to arguments
+    const socket = ws;
 
+    // attach the clientID to the socket client
+    socket.journalServerUUID = clientID;
+
+    // subscribe the client to our default broadcasts
     this.clientSubscriptions[clientID] = DEFAULT_EVENT_SUBSCRIPTIONS;
 
     // handle messages from the client
@@ -392,6 +400,7 @@ class EliteDangerousJournalServer {
 
         // send the client their subscription data
         ws.send(this.formatDataForSocket({}, clientID));
+
         console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('updated subscription')}`);
       } else {
         ws.send(this.formatDataForSocket({ error: true }, clientID));
@@ -429,28 +438,26 @@ class EliteDangerousJournalServer {
 
     // filter and sort the files Array to get an Array of Journals sorted DESC by
     // creation date and Journal part
-    this.journals = files
-      // filter to make sure we are only looking at Journal files
-      .filter(filename => JOURNAL_FILE_REGEX.test(path.basename(filename)))
+    // filter to make sure we are only looking at Journal files
+    this.journals = files.filter(filename => JOURNAL_FILE_REGEX.test(path.basename(filename)));
 
-      // sort by datestamp and part to make sure we have the most recent Journal
-      .sort((a, b) => {
-        // split Journal names so we can look at datestamp and part as necessary
-        const aFilenameArray = path.basename(a).split('.');
-        const bFilenameArray = path.basename(b).split('.');
+    // sort by datestamp and part to make sure we have the most recent Journal
+    this.journals.sort((a, b) => {
+      // split Journal names so we can look at datestamp and part as necessary
+      const aFilenameArray = path.basename(a).split('.');
+      const bFilenameArray = path.basename(b).split('.');
 
-        // geerate moment Objects from our datestamp for comparison
-        const aDatestamp = moment(aFilenameArray[1], 'YYMMDDHHmmss');
-        const bDatestamp = moment(bFilenameArray[1], 'YYMMDDHHmmss');
+      // geerate moment Objects from our datestamp for comparison
+      const aDatestamp = moment(aFilenameArray[1], 'YYMMDDHHmmss');
+      const bDatestamp = moment(bFilenameArray[1], 'YYMMDDHHmmss');
 
-        // sort DESC by datestamp
-        if (bDatestamp.isAfter(aDatestamp)) {
-          return 1;
-        }
+      // sort DESC by datestamp
+      if (bDatestamp.isAfter(aDatestamp)) {
+        return 1;
+      }
 
-        return -1;
-      })
-    ;
+      return -1;
+    });
 
     // the first item in our Array should be our current journal
     [this.currentJournal] = this.journals;
