@@ -157,6 +157,10 @@ socket.on('message', (data) => {
 This is more advanced topic, please see the [discovery.js example](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/examples/client/discovery.js)
 for more information on utilizing Network Discovery in your client.
 
+## Contributors
+
+Check out the [guide to contributing](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CONTRIBUTING.md)
+if you'd like to be a [contributor](https://github.com/DVDAGames/elite-dangerous-journal-server/graphs/contributor).
 
 ## Acknowledgements
 
