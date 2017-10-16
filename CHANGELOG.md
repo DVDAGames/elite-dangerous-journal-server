@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 No unreleased changes yet
 
+## [2.4.1] - 2017-10-16
+### Added
+- Added `.npmignore`
+
+### Changed
+- Incrementing patch version to republish with `.npmignore` update
+
 ## [2.4.0] - 2017-10-16
 ### Added
 - Ability to specify custom polling `interval` for Journal watcher
@@ -50,7 +57,8 @@ No unreleased changes yet
 ### Added
 - Allow client to subscribe to specific Journal Events
 
-[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...HEAD)
+[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...HEAD)
+[2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...2.4.1)
 [2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.3.0...2.4.0)
 [2.3.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.2.0...2.3.0)
 [2.2.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.1.0...2.2.0)
