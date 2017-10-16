@@ -214,7 +214,7 @@ class EliteDangerousJournalServer {
   shutdownWithoutDiscovery() {
     // destroy WebSocket Server
     this.server.close();
-    
+
     console.log(`${chalk.gray('Muting Web Socket listener...')}`);
 
     // destroy http server
@@ -238,7 +238,7 @@ class EliteDangerousJournalServer {
   broadcast(data) {
     // make sure we were given a message
     if (data) {
-      console.log(`${chalk.gray('Emitting event')} ${chalk.green(data.event)}:${chalk.yellow(data.timestamp)}`);
+      console.log(`${chalk.gray('Broadcasting event')} ${chalk.green(data.event)}:${chalk.yellow(data.timestamp)}`);
 
       // iterate through connected clients and send message to each one
       this.server.clients.forEach((client) => {
@@ -309,7 +309,7 @@ class EliteDangerousJournalServer {
     // stop watching old journal
     this.journalWatcher.unwatch(this.currentJournal);
 
-    console.log(`${chalk.green('No longer emitting changes to')} ${chalk.magenta(this.currentJournal)}`);
+    console.log(`${chalk.green('No longer broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
 
     // add Journal path to start of Journals Array
     this.journals.unshift(journalPath);
@@ -320,7 +320,7 @@ class EliteDangerousJournalServer {
     // stop watching old journal
     this.journalWatcher.add(this.currentJournal);
 
-    console.log(`${chalk.green('Now emitting changes to')} ${chalk.magenta(this.currentJournal)}`);
+    console.log(`${chalk.green('Now broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
 
     // retrieve Journal entries from the Journal file
     this.getJournalContents();
