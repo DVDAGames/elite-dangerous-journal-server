@@ -27,7 +27,7 @@ by passing the desired event names as an Array to the server. There is an exampl
 ## Contributors
 
 Check out the [guide to contributing](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CONTRIBUTING.md)
-if you'd like to be a [contributor](https://github.com/DVDAGames/elite-dangerous-journal-server/graphs/contributor).
+if you'd like to be a [contributor](https://github.com/DVDAGames/elite-dangerous-journal-server/graphs/contributors).
 
 
 ## Changelog
