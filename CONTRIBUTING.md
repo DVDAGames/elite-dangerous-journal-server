@@ -41,4 +41,4 @@ Galaxy Map fires `Soundtrack` events and can be done without ever leaving a stat
 with your changes
 12. Accept an Internet High Five from us for helping out
 
-![Nailed it!](http://gph.is/1M6KjO1)
+![](https://media.giphy.com/media/wrzf9P70YWLJK/giphy.gif)
