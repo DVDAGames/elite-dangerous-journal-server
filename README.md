@@ -1,7 +1,7 @@
 
 # Elite: Dangerous Journal Server
 
-#### Version 2.4.1
+[![npm (scoped)](https://img.shields.io/npm/v/@dvdagames/elite-dangerous-journal-server.svg?style=flat-square)](https://www.npmjs.com/package/@dvdagames/elite-dangerous-journal-server)
 
 A simple WebSocket server for emiting *Elite: Dangerous* Journal Events; it includes
 network discovery features so clients can easily find and connect to the server.
