@@ -126,7 +126,7 @@ class EliteDangerousJournalServer {
     // store start time for uptime calculations
     this.creation = moment();
 
-    console.log(`${chalk.gray(`Wecome to ${this.config.serviceName} version ${packageJSON.version}`)}`);
+    console.log(`${chalk.gray(`o7  Wecome to ${this.config.serviceName} version ${packageJSON.version}`)}`);
 
     // get port, id, serviceName, discovery, and journalPath from our config
     // destructuring them here just allows us to use the Object shorthand in our
@@ -229,7 +229,7 @@ class EliteDangerousJournalServer {
 
     console.log(`${chalk.gray(`Server uptime was ${moment().diff(this.creation, 'hours')} hours`)}`);
 
-    console.log(`${chalk.gray('Good bye')}`);
+    console.log(`${chalk.gray('Good bye.  o7')}`);
 
     // end execution
     process.exit();
