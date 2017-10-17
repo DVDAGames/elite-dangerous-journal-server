@@ -9,20 +9,16 @@ Below is some information for Bug Reporting as well as some quick guidelines and
 
 ## Bug Reporting
 
-First, thanks for taking the time to let us know about errors you encounter. This is a very important part of making this software better and your role is paramount to the success of the project.
+Thanks for taking the time to let us know about errors you encounter. This
+is a very important part of making this software better.
 
-When creating an Issue, please provide as much detail as possible about what was going on when the error occurred as well as providing the relevant Journal Server broadcast if possible.
+We really appreciate your time.
 
-All of the following would be helpful to know:
+When creating an [Issue](https://github.com/DVDAGames/elite-dangerous-journal-server/issues),
+please try to follow the template we've provided and provide as much detail as possible
+about what was going on when the error occurred.
 
-- Dit it occur on the Journal Server or a connected client?
-- How many clients were connected?
-- Was the play session a single Journal or did it span multiple Journals?
-- What type of Journal Event was being broadcast?
-
-We will very likely follow up with more questions, and greatly appreciate your help.
-
-## Guidelines
+## Contributing Guidelines
 
 - This project follows the [Airbnb JavaScript Style Guide](https://github.com/airbnb/javascript)
 and as long as you `npm install` you should get the necessary `eslint` dependencies for checking
@@ -33,7 +29,7 @@ ensure you have your editor configured to work with EditorConfig
 - This project follows the [semver](http://semver.org/) guidelines for versioning
 - This project uses a git pre-commit hook that will prevent commits if eslint finds errors
 
-## Contributing
+## Development Process
 
 1. Fork this repository and clone it locally
 2. `cd` into your local repo
@@ -53,7 +49,7 @@ Galaxy Map fires `Soundtrack` events and can be done without ever leaving a stat
 9. Exit the client process; exit the server process
 10. Run `npm run lint` to make sure there aren't any errors
 11. Submit a [Pull Request](https://github.com/DVDAGames/elite-dangerous-journal-server/pulls)
-with your changes
+and follow our PR Template
 12. Accept an Internet High Five from us for helping out
 
 ![](https://media.giphy.com/media/wrzf9P70YWLJK/giphy.gif)
