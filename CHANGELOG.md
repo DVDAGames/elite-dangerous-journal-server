@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-No unreleased changes yet
+### Added
+- `.github` diretory for storing GitHub-specific files
+- `.github/issue_template.md` to help with bug reporting
+
+### Changed
+- `CONTRIBUTING.md` referenced Issue template and reduced Bug Reporting verbiage;
+added link to Issues page
+- Added `.github` to `.npmignore` so it isn't published
 
 ## [2.4.1] - 2017-10-16
 ### Added
