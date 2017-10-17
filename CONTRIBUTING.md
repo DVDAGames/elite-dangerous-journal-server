@@ -5,7 +5,12 @@ Thanks for your interest in contributing to **Elite: Dangerous Journal Server**!
 
 We're excited to have you help out.
 
-Below is some information for Bug Reporting as well as some quick guidelines and steps for contributing.
+Every bug report, pull request, question, and suggestion is important to us.
+
+Below you will find some information for bug reporting as well as some quick guidelines
+and steps for contributing.
+
+Be sure to check out the [Code of Conduct](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CODE_OF_CONDUCT.md).
 
 ## Bug Reporting
 
@@ -30,6 +35,11 @@ ensure you have your editor configured to work with EditorConfig
 - This project uses a git pre-commit hook that will prevent commits if eslint finds errors
 
 ## Development Process
+
+**NOTE**: If this process seems like a lot, we plan to add some mock Journal data
+and better ways to test the code in the future. If you get lost at any point, just
+[open an issue](https://github.com/DVDAGames/elite-dangerous-journal-server/issues/new)
+and we'll help walk you through it.
 
 1. Fork this repository and clone it locally
 2. `cd` into your local repo
