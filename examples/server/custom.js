@@ -1,6 +1,6 @@
 const uuid = require('uuid/v5');
 
-const EliteDangerousJournalServer = require('../../index.js');
+const EliteDangerousJournalServer = require('../../src/index.js');
 
 const UUID_NAMESPACE = 'ws://journalserver.dvdagames.com/';
 

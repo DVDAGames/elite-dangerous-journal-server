@@ -1,4 +1,4 @@
-const EliteDangerousJournalServer = require('../../index.js');
+const EliteDangerousJournalServer = require('../../src/index.js');
 
 const JournalServer = new EliteDangerousJournalServer();
 
