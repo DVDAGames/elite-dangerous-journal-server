@@ -49,7 +49,7 @@ Galaxy Map fires `Soundtrack` events and can be done without ever leaving a stat
 9. Exit the client process; exit the server process
 10. Run `npm run lint` to make sure there aren't any errors
 11. Submit a [Pull Request](https://github.com/DVDAGames/elite-dangerous-journal-server/pulls)
-with your changes
+and follow our PR Template
 12. Accept an Internet High Five from us for helping out
 
 ![](https://media.giphy.com/media/wrzf9P70YWLJK/giphy.gif)
