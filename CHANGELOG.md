@@ -11,11 +11,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - `.github` diretory for storing GitHub-specific files
 - `.github/issue_template.md` to help with bug reporting
+- `.github/pull_request_template.md`
+- `CODE_OF_CONDUCT.md`
 
 ### Changed
 - `CONTRIBUTING.md` referenced Issue template and reduced Bug Reporting verbiage;
 added link to Issues page
 - Added `.github` to `.npmignore` so it isn't published
+- Added `CODE_OF_CONDUCT.md` to `.npmignore`
+- Reworded some of Contributing Guidelines
 
 ## [2.4.1] - 2017-10-16
 ### Added
