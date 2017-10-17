@@ -5,7 +5,22 @@ Thanks for your interest in contributing to **Elite: Dangerous Journal Server**!
 
 We're excited to have you help out.
 
-Below are some quick guidelines and steps for contributing.
+Below is some information for Bug Reporting as well as some quick guidelines and steps for contributing.
+
+## Bug Reporting
+
+First, thanks for taking the time to let us know about errors you encounter. This is a very important part of making this software better and your role is paramount to the success of the project.
+
+When creating an Issue, please provide as much detail as possible about what was going on when the error occurred as well as providing the relevant Journal Server broadcast if possible.
+
+All of the following would be helpful to know:
+
+- Dit it occur on the Journal Server or a connected client?
+- How many clients were connected?
+- Was the play session a single Journal or did it span multiple Journals?
+- What type of Journal Event was being broadcast?
+
+We will very likely follow up with more questions, and greatly appreciate your help.
 
 ## Guidelines
 
