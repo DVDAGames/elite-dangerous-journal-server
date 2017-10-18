@@ -147,7 +147,11 @@ class EliteDangerousJournalServer {
     // initialize WebSocket Server
     this.server = new WebSocket.Server(Object.assign({}, this.httpServer, { port }));
 
-    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
+    // reassign port from WebSocketServer in case user passed 0 for port number
+    // eslint-disable-next-line no-underscore-dangle
+    this.config.port = this.server._server.address().port;
+
+    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(this.config.port)}${chalk.green('...')}`);
 
     if (discovery) {
       // publish service for discovery
@@ -155,7 +159,7 @@ class EliteDangerousJournalServer {
         name: serviceName,
         type: JOURNAL_SERVER_SERVICE_TYPE,
         txt: { id, version: packageJSON.version },
-        port,
+        port: this.config.port,
       });
 
       console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(serviceName)} ${chalk.green('for discovery...')}`);
