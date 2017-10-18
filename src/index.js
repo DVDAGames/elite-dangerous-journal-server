@@ -5,7 +5,6 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const process = require('process');
 
 // package.json for version number and such
 const packageJSON = require('../package.json');
