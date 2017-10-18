@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 *Currently no unreleased changes*
 
+## [2.5.1] - 2017-10-18
+### Fixed
+- Fixed port `0` when running outside of test scripts
+- Actually using `httpServer` with `ws` correctly
+
+### Notes
+
+This came up when testing launching a Journal Server inside of an Electron Application
+and things were failing without telling the http server to listen and then grabbing the
+port.
+
 ## [2.5.0] - 2017-10-18
 ### Added
 - Ability to use `0` for port to get randomly assigned port from OS
@@ -83,7 +94,8 @@ added link to Issues page
 
 ---
 
-[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.0...HEAD)
+[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.1...HEAD)
+[2.5.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.0...2.5.1)
 [2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.3...2.5.0)
 [2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.2...2.4.3)
 [2.4.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...2.4.2)
