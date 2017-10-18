@@ -4,7 +4,7 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const http = require('http');
+const { createServer } = require('http');
 
 // package.json for version number and such
 const packageJSON = require('../package.json');
@@ -128,6 +128,29 @@ class EliteDangerousJournalServer {
 
     console.log(`${chalk.gray(`o7  Wecome to ${this.config.serviceName} version ${packageJSON.version}`)}`);
 
+    // get port and id from our config
+    // destructuring them here just allows us to use the Object shorthand in our
+    const {
+      port,
+      id,
+    } = this.config;
+
+    // start http server to attach our socket server to
+    this.httpServer = createServer();
+
+    console.log(`${chalk.green('Journal Server')} ${chalk.blue(id)} ${chalk.green(`created on ${this.creation.format('YYYY-MM-DD HH:mm:ss')}`)}`);
+
+    // initialize WebSocket Server
+    this.server = new WebSocket.Server({ server: this.httpServer });
+
+    // start listening
+    this.httpServer.listen(port, this.serverListening.bind(this));
+  }
+
+  serverListening() {
+    // reassign port from httpServer in case user passed 0 for port number
+    this.config.port = this.httpServer.address().port;
+
     // get port, id, serviceName, discovery, and journalPath from our config
     // destructuring them here just allows us to use the Object shorthand in our
     // WebSocket.Server() and bonjour options
@@ -139,19 +162,7 @@ class EliteDangerousJournalServer {
       journalPath,
     } = this.config;
 
-    // start http server to attach our socket server to
-    this.httpServer = http.createServer();
-
-    console.log(`${chalk.green('Journal Server')} ${chalk.blue(id)} ${chalk.green(`created on ${this.creation.format('YYYY-MM-DD HH:mm:ss')}`)}`);
-
-    // initialize WebSocket Server
-    this.server = new WebSocket.Server(Object.assign({}, this.httpServer, { port }));
-
-    // reassign port from WebSocketServer in case user passed 0 for port number
-    // eslint-disable-next-line no-underscore-dangle
-    this.config.port = this.server._server.address().port;
-
-    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(this.config.port)}${chalk.green('...')}`);
+    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
 
     if (discovery) {
       // publish service for discovery
@@ -159,7 +170,7 @@ class EliteDangerousJournalServer {
         name: serviceName,
         type: JOURNAL_SERVER_SERVICE_TYPE,
         txt: { id, version: packageJSON.version },
-        port: this.config.port,
+        port,
       });
 
       console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(serviceName)} ${chalk.green('for discovery...')}`);
