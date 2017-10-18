@@ -25,7 +25,7 @@ const _ = require('lodash');
  * RegEx to match against the Journal filename conventions used by E:D
  * @type {RegEx}
  */
-const JOURNAL_FILE_REGEX = /Journal\.\d*?\.\d*?\.log/;
+const JOURNAL_FILE_REGEX = /^Journal\.\d*?\.\d*?\.log$/;
 
 /**
  * Port to use for our WebSocket connections
@@ -116,6 +116,7 @@ class EliteDangerousJournalServer {
     this.currentHeader = {};
     this.clientSubscriptions = {};
     this.commander = null;
+    this.journalRegEx = JOURNAL_FILE_REGEX;
   }
 
   /**
@@ -165,6 +166,7 @@ class EliteDangerousJournalServer {
     dir.files(journalPath, this.indexJournals.bind(this));
   }
 
+
   /**
    * Configures event handling for EliteDangerousJournalServer instance
    * @memberof EliteDangerousJournalServer
@@ -181,58 +183,53 @@ class EliteDangerousJournalServer {
   }
 
   /**
-   * responds to process kill and gracefully shuts down
+   * Handles listening for connections and messages from Clients
+   * @param {Object} ws WebSocket Object from WebSocket Server connection
    * @memberof EliteDangerousJournalServer
    */
-  shutdown() {
-    console.log(`${chalk.red('Journal Server shutting down...')}`);
+  websocketConnection(ws) {
+    // generate id for client connection
+    const clientID = uuid();
 
-    // check to see if we need to unpublish network discovery service
-    if (this.config.discovery) {
-      this.shutdownWithDiscovery();
-    } else {
-      this.shutdownWithoutDiscovery();
-    }
-  }
+    // get refernce to socket to satisfy eslint rules about assigning to arguments
+    const socket = ws;
 
-  /**
-   * unpublishes our discoverable service
-   * @memberof EliteDangerousJournalServer
-   */
-  shutdownWithDiscovery() {
-    // turn off discovery
-    zeroconf.unpublishAll(() => {
-      // destroy service
-      zeroconf.destroy();
+    // attach the clientID to the socket client
+    socket.journalServerUUID = clientID;
 
-      console.log(`${chalk.gray('Unpublishing discovery service...')}`);
+    // subscribe the client to our default broadcasts
+    this.clientSubscriptions[clientID] = DEFAULT_EVENT_SUBSCRIPTIONS;
 
-      // continue with rest of shutdown procedure
-      this.shutdownWithoutDiscovery();
+    // handle messages from the client
+    ws.on('message', (data) => {
+      const { type, payload } = JSON.parse(data);
+
+      if (type === 'subscribe' && payload) {
+        this.clientSubscriptions[clientID] = payload;
+
+        // send the client their subscription data
+        ws.send(this.formatDataForSocket({}, clientID));
+
+        console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('updated subscription')}`);
+      } else {
+        ws.send(this.formatDataForSocket({ error: true }, clientID));
+      }
     });
-  }
 
-  /**
-   * close server connections and exit
-   * @memberof EliteDangerousJournalServer
-   */
-  shutdownWithoutDiscovery() {
-    // destroy WebSocket Server
-    this.server.close();
+    // send the client the current header on successful connection
+    ws.send(this.formatDataForSocket(this.currentHeader), clientID);
 
-    console.log(`${chalk.gray('Muting Web Socket listener...')}`);
+    // handle client disconnection
+    ws.on('close', () => {
+      // remove client subscriptions
+      this.clientSubscriptions = _.omit(clientID);
 
-    // destroy http server
-    this.httpServer.close();
+      console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
+      console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
+    });
 
-    console.log(`${chalk.gray('Shutting down HTTP server...')}`);
-
-    console.log(`${chalk.gray(`Server uptime was ${moment().diff(this.creation, 'hours')} hours`)}`);
-
-    console.log(`${chalk.gray('Good bye.  o7')}`);
-
-    // end execution
-    process.exit();
+    console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('connected via Web Socket.')}`);
+    console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
   }
 
   /**
@@ -305,7 +302,7 @@ class EliteDangerousJournalServer {
     this.journalWatcher.on('raw', this.journalEvent.bind(this));
 
     // retrieve content from the Journal to get header and seed our entries Array
-    this.getJournalContents();
+    this.getJournalContents(true);
   }
 
   /**
@@ -314,27 +311,30 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   newJournalCreated(journalPath) {
-    // reset current line position
-    this.currentLine = 0;
+    // ensure the new file was an actual Journal file
+    if (this.journalRegEx.test(path.basename(journalPath))) {
+      // reset current line position
+      this.currentLine = 0;
 
-    // stop watching old journal
-    this.journalWatcher.unwatch(this.currentJournal);
+      // stop watching old journal
+      this.journalWatcher.unwatch(this.currentJournal);
 
-    console.log(`${chalk.green('No longer broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
+      console.log(`${chalk.green('No longer broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
 
-    // add Journal path to start of Journals Array
-    this.journals.unshift(journalPath);
+      // add Journal path to start of Journals Array
+      this.journals.unshift(journalPath);
 
-    // make new Journal file the current Journal
-    [this.currentJournal] = this.journals;
+      // make new Journal file the current Journal
+      [this.currentJournal] = this.journals;
 
-    // stop watching old journal
-    this.journalWatcher.add(this.currentJournal);
+      // stop watching old journal
+      this.journalWatcher.add(this.currentJournal);
 
-    console.log(`${chalk.green('Now broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
+      console.log(`${chalk.green('Now broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
 
-    // retrieve Journal entries from the Journal file
-    this.getJournalContents();
+      // retrieve Journal entries from the Journal file
+      this.getJournalContents();
+    }
   }
 
   /**
@@ -348,7 +348,7 @@ class EliteDangerousJournalServer {
     if (event === 'change' && filepath === this.currentJournal) {
       this.getJournalUpdate();
     } else {
-      console.log(`${chalk.green('Filesystem event occured for')} ${chalk.magenta(filepath)}`);
+      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occured for`)} ${chalk.magenta(filepath)}`);
     }
   }
 
@@ -381,56 +381,6 @@ class EliteDangerousJournalServer {
   }
 
   /**
-   * Handles listening for connections and messages from Clients
-   * @param {Object} ws WebSocket Object from WebSocket Server connection
-   * @memberof EliteDangerousJournalServer
-   */
-  websocketConnection(ws) {
-    // generate id for client connection
-    const clientID = uuid();
-
-    // get refernce to socket to satisfy eslint rules about assigning to arguments
-    const socket = ws;
-
-    // attach the clientID to the socket client
-    socket.journalServerUUID = clientID;
-
-    // subscribe the client to our default broadcasts
-    this.clientSubscriptions[clientID] = DEFAULT_EVENT_SUBSCRIPTIONS;
-
-    // handle messages from the client
-    ws.on('message', (data) => {
-      const { type, payload } = JSON.parse(data);
-
-      if (type === 'subscribe' && payload) {
-        this.clientSubscriptions[clientID] = payload;
-
-        // send the client their subscription data
-        ws.send(this.formatDataForSocket({}, clientID));
-
-        console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('updated subscription')}`);
-      } else {
-        ws.send(this.formatDataForSocket({ error: true }, clientID));
-      }
-    });
-
-    // send the client the current header on successful connection
-    ws.send(this.formatDataForSocket(this.currentHeader), clientID);
-
-    // handle client disconnection
-    ws.on('close', () => {
-      // remove client subscriptions
-      this.clientSubscriptions = _.omit(clientID);
-
-      console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
-      console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
-    });
-
-    console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('connected via Web Socket.')}`);
-    console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
-  }
-
-  /**
    * Finds the Journals in Journal Directory and sets up the Journal Array
    * @param {Object} error error response from dir.files
    * @param {Array} files array of file paths found by dir.files
@@ -443,28 +393,8 @@ class EliteDangerousJournalServer {
       throw error;
     }
 
-    // filter and sort the files Array to get an Array of Journals sorted DESC by
-    // creation date and Journal part
-    // filter to make sure we are only looking at Journal files
-    this.journals = files.filter(filename => JOURNAL_FILE_REGEX.test(path.basename(filename)));
-
-    // sort by datestamp and part to make sure we have the most recent Journal
-    this.journals.sort((a, b) => {
-      // split Journal names so we can look at datestamp and part as necessary
-      const aFilenameArray = path.basename(a).split('.');
-      const bFilenameArray = path.basename(b).split('.');
-
-      // geerate moment Objects from our datestamp for comparison
-      const aDatestamp = moment(aFilenameArray[1], 'YYMMDDHHmmss');
-      const bDatestamp = moment(bFilenameArray[1], 'YYMMDDHHmmss');
-
-      // sort DESC by datestamp
-      if (bDatestamp.isAfter(aDatestamp)) {
-        return 1;
-      }
-
-      return -1;
-    });
+    // get correct journal order
+    this.journals = this.sortJournals(files);
 
     // the first item in our Array should be our current journal
     [this.currentJournal] = this.journals;
@@ -489,6 +419,63 @@ class EliteDangerousJournalServer {
   }
 
   /**
+   * filter and sort the files Array to get an Array of Journals sorted DESC by
+   * creation date and Journal part
+   * @param {Array} [journals=[]] array of files found in directory
+   * @returns {Array}
+   * @memberof EliteDangerousJournalServer
+   */
+  sortJournals(journals = []) {
+    return journals
+      // filter to make sure we are only looking at Journal files
+      // this also has the added benefit of letting us sort the filtered Array
+      // without mutating the original Array of files
+      .filter(file => this.journalRegEx.test(path.basename(file)))
+      // sort by datestamp and part to make sure we have the most recent Journal
+      .sort((a, b) => {
+        // split Journal names so we can look at datestamp and part as necessary
+        const aFilenameArray = path.basename(a).split('.');
+        const bFilenameArray = path.basename(b).split('.');
+
+        // geerate moment Objects from our datestamp for comparison
+        const aDatestamp = moment(aFilenameArray[1], 'YYMMDDHHmmss');
+        const bDatestamp = moment(bFilenameArray[1], 'YYMMDDHHmmss');
+
+        // sort DESC by datestamp
+        if (bDatestamp.isAfter(aDatestamp)) {
+          return 1;
+        }
+
+        return -1;
+      });
+  }
+
+  /**
+   * Reads content of Journal file
+   * @param {Boolean} [startup=false] is this the initial index of the Journal Server?
+   * @memberof EliteDangerousJournalServer
+   */
+  getJournalContents(startup = false) {
+    // get Journal content Array
+    let lines = this.readJournalFileContents();
+
+    // make sure there was content in the file
+    if (lines.length) {
+      // remove header
+      lines = this.getJournalHeader(lines);
+
+      // if this is a new Journal session, clear out previous entries
+      if (this.currentHeader.part === 1) {
+        this.entries = [];
+      }
+
+      // retrieve entries from the Journal content
+      this.getJournalEntries(lines, startup);
+    }
+  }
+
+
+  /**
    * Retrieves the header from the provided Journal content and returns headerless
    * Journal content Array
    * @param {Array} lines the content of our Journal file
@@ -509,57 +496,95 @@ class EliteDangerousJournalServer {
   }
 
   /**
-   * Reads content of Journal file
-   * @memberof EliteDangerousJournalServer
-   */
-  getJournalContents() {
-    // get Journal content Array
-    let lines = this.readJournalFileContents();
-
-    // remove header
-    lines = this.getJournalHeader(lines);
-
-    // if this is a new Journal session, clear out previous entries
-    if (this.currentHeader.part === 1) {
-      this.entries = [];
-    }
-
-    // retrieve entries from the Journal content
-    this.getJournalEntries(lines);
-  }
-
-  /**
-   * Iterates through Journal content and adds entries
+   * Iterates through Journal content and add and broadcast entries
    * @param {Array} [lines=[]] array of journal content read from Journal file
+   * @param {Boolean} [mute=false] should we mute the entries
    * @memberof EliteDangerousJournalServer
    */
-  getJournalEntries(lines = []) {
+  getJournalEntries(lines = [], mute = false) {
     // iterate through JSON-lines
-    lines.forEach(this.addJournalEntry.bind(this));
+    lines.forEach((entry) => {
+      // get line as Object
+      const formattedEntry = JSON.parse(entry);
+
+      // make sure we have an actual entry and not an empty line or empty Object
+      if (formattedEntry) {
+        // add entry to our Array
+        this.entries.push(formattedEntry);
+
+        // get commander name from the LoadGame event
+        // this could run if the names are the same, but since it's just assigning
+        // a value to one property in the case of one event it should be okay
+        if (formattedEntry.event === EVENT_FOR_COMMANDER_NAME) {
+          this.commander = formattedEntry.Commander;
+        }
+
+        // increment line coutner so we know where we are in the content
+        this.currentLine = this.currentLine + 1;
+
+        // broadcast entry to clients if we aren't supposed to mute it
+        if (!mute) {
+          this.broadcast(formattedEntry);
+        }
+      }
+    });
   }
 
   /**
-   * Injects entries into entry Array and broadcasts them to clients
-   * @param {any} entry journal entry to broadcast
+   * responds to process kill and gracefully shuts down
    * @memberof EliteDangerousJournalServer
    */
-  addJournalEntry(entry) {
-    const formattedEntry = JSON.parse(entry);
+  shutdown() {
+    console.log(`${chalk.red('Journal Server shutting down...')}`);
 
-    // add entry to our Array
-    this.entries.push(formattedEntry);
-
-    // get commander name from the LoadGame event
-    if (formattedEntry.event === EVENT_FOR_COMMANDER_NAME) {
-      this.commander = formattedEntry.Commander;
+    // check to see if we need to unpublish network discovery service
+    if (this.config.discovery) {
+      this.shutdownWithDiscovery();
+    } else {
+      this.shutdownWithoutDiscovery();
     }
-
-    // increment line coutner so we know where we are in the content
-    this.currentLine = this.currentLine + 1;
-
-    // broadcast entry to cleints
-    this.broadcast(JSON.parse(entry));
   }
+
+  /**
+   * unpublishes our discoverable service
+   * @memberof EliteDangerousJournalServer
+   */
+  shutdownWithDiscovery() {
+    // turn off discovery
+    zeroconf.unpublishAll(() => {
+      // destroy service
+      zeroconf.destroy();
+
+      console.log(`${chalk.gray('Unpublishing discovery service...')}`);
+
+      // continue with rest of shutdown procedure
+      this.shutdownWithoutDiscovery();
+    });
+  }
+
+  /**
+   * close server connections and exit
+   * @memberof EliteDangerousJournalServer
+   */
+  shutdownWithoutDiscovery() {
+    // destroy WebSocket Server
+    this.server.close();
+
+    console.log(`${chalk.gray('Muting Web Socket listener...')}`);
+
+    // destroy http server
+    this.httpServer.close();
+
+    console.log(`${chalk.gray('Shutting down HTTP server...')}`);
+
+    console.log(`${chalk.gray(`Server uptime was ${moment().diff(this.creation, 'hours')} hours`)}`);
+
+    console.log(`${chalk.gray('Good bye.  o7')}`);
+
+    // end execution
+    process.exit();
+  }
+
 }
 
 module.exports = EliteDangerousJournalServer;

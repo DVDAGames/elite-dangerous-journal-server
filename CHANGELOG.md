@@ -8,18 +8,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Added
+*Currently no unreleased changes*
+
+## [2.4.2] - 2017-10-17
+### Changed
+- Suppressed broadcast of Journal Events during initial indexing of Journal at startup
+
+### Housekeeping
 - `.github` diretory for storing GitHub-specific files
 - `.github/issue_template.md` to help with bug reporting
 - `.github/pull_request_template.md`
 - `CODE_OF_CONDUCT.md`
-
-### Changed
 - `CONTRIBUTING.md` referenced Issue template and reduced Bug Reporting verbiage;
 added link to Issues page
 - Added `.github` to `.npmignore` so it isn't published
 - Added `CODE_OF_CONDUCT.md` to `.npmignore`
 - Reworded some of Contributing Guidelines
+- Added basic Journals to `examples/mocks` for testing
 
 ## [2.4.1] - 2017-10-16
 ### Added
@@ -68,8 +73,11 @@ added link to Issues page
 ### Added
 - Allow client to subscribe to specific Journal Events
 
+---
+
 [Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...HEAD)
-[2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...2.4.1)
+[2.4.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...2.4.2)
+[2.4.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...2.4.1)
 [2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.3.0...2.4.0)
 [2.3.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.2.0...2.3.0)
 [2.2.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.1.0...2.2.0)
