@@ -24,6 +24,15 @@ Clients can subscribe to any of the Journal Events described in the
 by passing the desired event names as an Array to the server. There is an example below.
 
 
+## Projects
+
+- [E:D Tightbeam](https://github.com/DVDAGames/ed-tightbeam) is a work-in-progress Electron application to host a
+Journal Server so that users don't have to install Node or run scripts in a Terminal.
+
+If you're building something with `@dvdagames/elite-dangerous-journal-server` please let us know or submit a
+[Pull Request](https://github.com/DVDAGames/elite-dangerous-journal-server/pulls) adding your project to this list. 
+
+
 ## Contributors
 
 Check out the [guide to contributing](https://github.com/DVDAGames/elite-dangerous-journal-server/blob/master/CONTRIBUTING.md)
