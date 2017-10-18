@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 *Currently no unreleased changes*
 
+## [2.4.3] - 2017-10-17
+### Fixed
+- Removed `process` declaration from `src/index.js`
+
 ## [2.4.2] - 2017-10-17
 ### Changed
 - Suppressed broadcast of Journal Events during initial indexing of Journal at startup
@@ -75,7 +79,8 @@ added link to Issues page
 
 ---
 
-[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...HEAD)
+[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.3...HEAD)
+[2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.2...2.4.3)
 [2.4.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...2.4.2)
 [2.4.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...2.4.1)
 [2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.3.0...2.4.0)
