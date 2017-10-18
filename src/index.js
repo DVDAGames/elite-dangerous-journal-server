@@ -147,6 +147,10 @@ class EliteDangerousJournalServer {
     this.httpServer.listen(port, this.serverListening.bind(this));
   }
 
+  /**
+   * Establishes Network Discovery after server is ready; initializes indexing
+   * @memberof EliteDangerousJournalServer
+   */
   serverListening() {
     // reassign port from httpServer in case user passed 0 for port number
     this.config.port = this.httpServer.address().port;
