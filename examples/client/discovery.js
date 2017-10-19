@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const zeroconf = require('bonjour')();
 
 // name for the service we want to discover
-const SERVICE_NAME = 'Elite: Dangerous Journal Server';
+const SERVICE_NAME = 'Elite Dangerous Journal Server';
 
 // initialize variable to hold our WebSocket
 let socket;

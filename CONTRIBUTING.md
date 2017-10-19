@@ -1,7 +1,7 @@
 
 ## Introduction
 
-Thanks for your interest in contributing to **Elite: Dangerous Journal Server**!
+Thanks for your interest in contributing to **Elite Dangerous Journal Server**!
 
 We're excited to have you help out.
 
@@ -54,7 +54,7 @@ node examples/client/discovery.js
 node examples/server/index.js
 ```
 7. Notice the successful communication between Terminal windows
-8. Fire up *Elite: Dangerous* and trigger some Journal events - entering and leaving the
+8. Fire up *Elite Dangerous* and trigger some Journal events - entering and leaving the
 Galaxy Map fires `Soundtrack` events and can be done without ever leaving a station
 9. Exit the client process; exit the server process
 10. Run `npm run lint` to make sure there aren't any errors

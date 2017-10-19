@@ -48,7 +48,7 @@ const DEFAULT_EVENT_SUBSCRIPTIONS = ['ALL'];
  * Zeroconf/Bonjour service name
  * @type {String}
  */
-const JOURNAL_SERVER_SERVICE_NAME = 'Elite: Dangerous Journal Server';
+const JOURNAL_SERVER_SERVICE_NAME = 'Elite Dangerous Journal Server';
 
 /**
  * Type of Zeroconf/Bonjour service we are publishing

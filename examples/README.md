@@ -16,7 +16,7 @@ node examples/server/index.js
 ```shell
 node examples/client/index.js
 ```
-6. Run *Elite: Dangerous*
+6. Run *Elite Dangerous*
 7. Watch as the client responds to the Journal Events broadcast by the server
 
 **NOTE**: Each directory also has more advanced examples of Journal Server usage.
