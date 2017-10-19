@@ -10,7 +10,7 @@ ws.on('open', () => {
   const eventType = 'subscribe';
 
   // these are two easy events to see when starting up the Journal Server
-  // and the Elite: Dangerous game so that you don't have to work too hard to test
+  // and the Elite Dangerous game so that you don't have to work too hard to test
   // successful subscriptions
   const payload = ['Music', 'Fileheader'];
 

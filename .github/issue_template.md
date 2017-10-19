@@ -9,7 +9,7 @@ Server?
   - If you can recreate it, is there a particular Journal Event that causes it?
   - If you cannot recreate it, is there any information you can give us about what
   you were doing in-game when it happened?
-4. What **version** of the Elite: Dangerous Journal Server are you running?
+4. What **version** of the *Elite Dangerous Journal Server* are you running?
 
 ## Please provide the relevant Journal Server Broadcast if you have it
 
