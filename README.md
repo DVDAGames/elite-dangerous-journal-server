@@ -1,9 +1,9 @@
 
-# Elite: Dangerous Journal Server
+# Elite Dangerous Journal Server
 
 [![npm (scoped)](https://img.shields.io/npm/v/@dvdagames/elite-dangerous-journal-server.svg?style=flat-square)](https://www.npmjs.com/package/@dvdagames/elite-dangerous-journal-server)
 
-A simple WebSocket server for emiting *Elite: Dangerous* Journal Events; it includes
+A simple WebSocket server for emiting *Elite Dangerous* Journal Events; it includes
 network discovery features so clients can easily find and connect to the server.
 
 The basic idea of this project is to watch changes to the Journal file as the
@@ -26,7 +26,7 @@ by passing the desired event names as an Array to the server. There is an exampl
 
 ## Projects
 
-- [E:D Tightbeam](https://github.com/DVDAGames/ed-tightbeam) is a work-in-progress Electron application to host a
+- [ED Tightbeam](https://github.com/DVDAGames/ed-tightbeam) is a work-in-progress Electron application to host a
 Journal Server so that users don't have to install Node or run scripts in a Terminal.
 
 If you're building something with `@dvdagames/elite-dangerous-journal-server` please let us know or submit a
@@ -58,11 +58,11 @@ The server Class does not require any parameters, but has an optional configurat
 Object:
 
 - **port**: `Number` listen for socket connections on a specific port; defaults to `31337`
-- **journalPath**: `String` path to Elite: Dangerous Journal directory; defaults to
+- **journalPath**: `String` path to Elite Dangerous Journal directory; defaults to
 `~/Saved Games/Frontier Developments/Elite Dangerous/`
 - **id**: `String` unique identifier for this Journal Server; defaults to a generated UUID
 - **serviceName**: `String` name for network discovery service; defaults to
-`Elite: Dangerous Journal Server`
+`Elite Dangerous Journal Server`
 - **discovery**: `Boolean` should network discovery be enabled; defaults to `true`
 - **headers**: `Object` an optional Object of headers you'd like added to the broadcast;
 these properties will exist in the broadcast data outside of the `payload` property which
@@ -190,10 +190,10 @@ for more information on utilizing Network Discovery in your client.
 
 ## Acknowledgements
 
-- *Elite: Dangerous* is © 1984 - 2017 Frontier Developments plc.
-- [Elite: Dangerous Community Developers](https://edcd.github.io/) for documentation
+- *Elite Dangerous* is © [Frontier Developments plc](https://www.frontier.co.uk/).
+- [Elite Dangerous Community Developers](https://edcd.github.io/) for documentation
 and discussions
 - [CMDR willyb321](https://github.com/willyb321) for direction on a few different issues,
 including `fs.watch()` issues with the Journals and using Bonjour for Network Discovery
-- [Frontier Forums Elite: Dangerous Journal Discussion](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
+- [Frontier Forums Elite Dangerous Journal Discussion](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
 for providing some info about what's in these files and how they work
