@@ -7,8 +7,29 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+*No unreleased changes*
+
+## [3.0.0]
 ### Added
 - Added heartbeat pings between server and clients
+- Added ability for clients to register names
+- Added ability to force clients to register
+- Added ability to prevent subscriptions
+- Added ability to define custom default subscriptions
+- Added ability to configure error messages
+- Added error messages
+- Added some other directories and files to make things a bit easier to follow and less cluttered
+
+### Changed
+- Reformatted config Object for constuctor
+- Updated `README.md` to reflect latest changes
+
+### Fixed
+- Fixed issue with `lint` script looking at outdated, non-existant path
+
+### Deprecated
+- Previous configuration format
 
 ## [2.5.1] - 2017-10-18
 ### Fixed
@@ -94,17 +115,18 @@ added link to Issues page
 
 ---
 
-[Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.1...HEAD)
-[2.5.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.0...2.5.1)
-[2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.3...2.5.0)
-[2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.2...2.4.3)
-[2.4.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...2.4.2)
-[2.4.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...2.4.1)
-[2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.3.0...2.4.0)
-[2.3.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.2.0...2.3.0)
-[2.2.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.1.0...2.2.0)
-[2.1.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.0.1...2.1.0)
-[2.0.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.0.0...2.0.1)
-[2.0.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/1.0.2...2.0.0)
-[1.0.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/1.0.1...1.0.2)
-[1.0.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/53322ee...1.0.1)
+- [Unreleased](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/3.0.0...HEAD)
+- [3.0.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.1...3.0.0)
+- [2.5.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.5.0...2.5.1)
+- [2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.3...2.5.0)
+- [2.4.3](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.2...2.4.3)
+- [2.4.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.1...2.4.2)
+- [2.4.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.4.0...2.4.1)
+- [2.4.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.3.0...2.4.0)
+- [2.3.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.2.0...2.3.0)
+- [2.2.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.1.0...2.2.0)
+- [2.1.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.0.1...2.1.0)
+- [2.0.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/2.0.0...2.0.1)
+- [2.0.0](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/1.0.2...2.0.0)
+- [1.0.2](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/1.0.1...1.0.2)
+- [1.0.1](https://github.com/DVDAGames/elite-dangerous-journal-server/compare/53322ee...1.0.1)

@@ -11,7 +11,7 @@ player enjoys the game and emit every Journal update through a WebSocket to
 any connected clients that would like to listen for and react to these Journal
 updates.
 
-There is an example client included in the repo's [examples](https://github.com/DVDAGames/elite-dangerous-journal-server/tree/master/examples)
+There are example clients and servers included in the repo's [examples](https://github.com/DVDAGames/elite-dangerous-journal-server/tree/master/examples)
 directory.
 
 Currently, the server only allows the client to subscribe to specific events and
@@ -54,25 +54,49 @@ npm install --save @dvdagames/elite-dangerous-journal-server
 
 ### Server
 
-The server Class does not require any parameters, but has an optional configuration
-Object that currently supports the following properties:
+The server Class does not require any parameters, but can optionally accept a single parameter.
 
-- **port**: `Number` listen for socket connections on a specific port; defaults to `31337`
-- **journalPath**: `String` path to Elite Dangerous Journal directory; defaults to
-`~/Saved Games/Frontier Developments/Elite Dangerous/`
-- **id**: `String` unique identifier for this Journal Server; defaults to a generated UUID
-- **serviceName**: `String` name for network discovery service; defaults to
-`Elite Dangerous Journal Server`
-- **discovery**: `Boolean` should network discovery be enabled; defaults to `true`
-- **headers**: `Object` an optional Object of arbitraty headers you'd like added to the broadcast;
+This parameter can take on two different forms:
+  1. a single port `Number`
+  2. a configuration `Object`
+
+#### Configuration Object Properties
+
+- **port**: `[Number]: 31337` listen for socket connections on a specific port; using a `0` will use `http`'s random port assignment
+- **id**: `[String]: uuid()` unique identifier for this Journal Server
+- **watcher**: `[Object]` config for file watcher
+  - **path**: `[String]: "~/Saved Games/Frontier Developments/Elite Dangerous/"` path to *Elite Dangerous* Journal directory
+  - **interval**: `[Number]: 100` what interval (in `ms`) should our watcher use for polling for Journal updates
+  - **fileRegEx**: `[RegEx]: /^Journal\.\d*?\.\d*?\.log$/` what format should Journal filenames have
+- **discovery**: `[Object]` config for Bonjour/Zeroconf Network Discovery
+  - **enabled**: `[Boolean]: true` should network discovery be enabled
+  - **serviceName**: `[String]: "Elite Dangerous Journal Server"` name for network discovery service
+  - **serviceType**: `[String]: ws` type of service to publish
+- **heartbeat**: `[Object]` config for heartbeat pings
+  - **interval**: `[Number]: 30000` what interval (in `ms`) between heartbeat pings
+- **registration**: `[Object]` config for client registration settings
+  - **enabled**: `[Boolean]: false` should registration be enabled; this just means
+  that clients have to provide a name that can be used to refer to the client instead of only having the UUID we generate for each client
+  - **force**: `[Boolean]: false` should clients have to register before receiving any data; this supresses all Journal Server headers in message responses and broadcasts until the client has registered
+  - **messageType** `[String]: "register"` what should the client use for the `type` in their message when registering
+- **subscriptions**: `[Object]` config for client subscriptions settings
+  - **enabled**: `[Boolean]: true` should client be able to choose what Broadcasts to receive
+  - **subscribeTo**: `[Array]: ["ALL"]` what events to subscribe clients to by default; an empty Array (`[]`) will suppress all broadcasts unless subscribed to directly
+  - **messageType**: `[String]: "subscribe"` what should the client use for the `type` in their message when updating subscriptions
+- **errors**: `[Object]` config for error messages to client; each error is an `Object` with a `message` and status `code` property
+    **mustRegister**: `[Object]` config for registration required error
+      - **message**: `[String]: "Client must register with server"`
+      - **code**: `[Number]: 401`
+    **invalidMessage**: `[Object]` config for invalid message type error
+      - **message**: `[String]: "Server does not accept message type"`
+      - **code**: `[Number]: 403`
+    **invalidPayload**: `[Object]` config for invalid payload error
+      - **message**: `[String]: "Server does not accept payload"`
+      - **code**: `[Number]: 400`
+- **headers**: `[Object]` an optional Object of arbitraty headers you'd like added to the broadcast;
 these properties will exist in the broadcast data outside of the `payload` property which
 will contain the Journal Event
-- **interval**: `Number` what interval should our watcher use for polling for Journal updates
-- **heartbeat**: `Object` configuration for heartbeat pings; currently only supports one property
-  - **interval**: `Number` how long between heartbeat pings
 
-**NOTE**: If only providing a `port` you can just pass the `Number` into the constructor
-and don't need to provide a configuration Object.
 
 **NOTE**: If the `headers` property contains any of the default header properties
 that the Journal Server already plans to send, those headers will be overwritten by
@@ -115,7 +139,14 @@ const headers = {
   TEST: true
 };
 
-const config = { port, id, serviceName, headers };
+const config = {
+  port,
+  id,
+  discovery: {
+    serviceName,
+  },
+  headers,
+};
 
 const JournalServer = new EliteDangerousJournalServer(config);
 
@@ -130,20 +161,39 @@ which Journal Events the Journal Server will broadcast to them.
 
 The Journal Server broadcast will have the following data:
 
-- **journalServer**: `String` the UUID of the Journal Server that sent the message
-- **serverVersion**: `String` the version number of the currently running Journal
-Server package
-- **journal**: `String` the name of the Journal file that is currently being used
-- **clientID**: `String` the UUID the Journal Server has assigned to this client
-- **subscribedTo**: `Array` the events that this client is subscribed to
-- **commander**: `String` the currently loaded CMDR name; `null` until `LoadGame`
-event
-- **payload**: `Object` the Journal Event that was triggered or the message from
-the Journal Server
+#### Headers
 
-**NOTE**: The `payload` property will be an empty Object when clients update subscriptions
-and will be the following Object if the client sends an invalid message: `{ error: true }`.
-In every other case it will contain the JSON-lines Object for that Journal Event.
+- **journalServer**: `[String]` the UUID of the Journal Server that sent the message
+- **serverVersion**: `[String]` the version number of the currently running Journal
+Server package
+- **journal**: `[String]` the name of the Journal file that is currently being used
+- **clientID**: `[String]` the UUID the Journal Server has assigned to this client
+- **clientName** `[String]` the name the client registered with; `null` until registered
+- **subscribedTo**: `[Array]` the events that this client is subscribed to
+- **commander**: `[String]` the currently loaded CMDR name; `null` until `LoadGame`
+event
+
+**NOTE**: If `registration.force` is enabled, no headers will be present in the broadcast
+until the client has registered.
+
+#### Payload
+
+- **payload**: `[Object]` the Journal Event that was triggered or the message from
+the Journal Server
+  - The `payload` property will be the current Journal's header when clients's register
+  or update subscriptions.
+  - The `payload` property will be an Error Object like the following when there is an issue:
+  ```json
+  {
+    payload: {
+      error: true,
+      message: 'Client must register with Server',
+      code: 401
+    }
+  }
+  ```
+  - The `payload` property should contain the JSON-lines Object for the current Journal
+  Event in all other cases
 
 
 #### Basic Example
@@ -176,7 +226,7 @@ const socket = new WebSocket('ws://localhost:31337');
 
 socket.on('open', () => {
   const type = 'subscribe';
-  const payload = ['DockingRequested', 'DockingGranted', 'Docked'];
+  const payload = ['DockingRequested', 'DockingGranted', 'Docked', 'Undocked'];
 
   // only subscribe to Docking Events
   ws.send(JSON.stringify({ type, payload }));
@@ -187,7 +237,7 @@ socket.on('message', (data) => {
 
   const { payload } = broadcast;
 
-  console.log(`CMDR: ${payload.event}`);
+  console.log(`Received: ${payload.event}`);
 });
 ```
 
