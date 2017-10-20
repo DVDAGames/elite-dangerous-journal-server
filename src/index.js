@@ -1,7 +1,6 @@
 /* eslint no-console: 0 */
 
 // Node imports
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { createServer } = require('http');
@@ -17,79 +16,14 @@ const chokidar = require('chokidar');
 const moment = require('moment');
 const chalk = require('chalk');
 const uuid = require('uuid/v1');
-const _ = require('lodash');
+const { merge, omit, isNumber } = require('lodash');
 
+// utilities
+const { formatClientName } = require('./utilities');
 
-/**
- * RegEx to match against the Journal filename conventions used by E:D
- * @type {RegEx}
- */
-const JOURNAL_FILE_REGEX = /^Journal\.\d*?\.\d*?\.log$/;
-
-/**
- * Port to use for our WebSocket connections
- * @type {Number}
- */
-const JOURNAL_SERVER_PORT = 31337;
-
-/**
- * Path that E:D saves Journal files to
- * @type {String}
- */
-const JOURNAL_DIR = path.join(os.homedir(), 'Saved Games', 'Frontier Developments', 'Elite Dangerous');
-
-/**
- * Default Journal Event subscription list for clients
- * @type {Array}
- */
-const DEFAULT_EVENT_SUBSCRIPTIONS = ['ALL'];
-
-/**
- * Zeroconf/Bonjour service name
- * @type {String}
- */
-const JOURNAL_SERVER_SERVICE_NAME = 'Elite Dangerous Journal Server';
-
-/**
- * Type of Zeroconf/Bonjour service we are publishing
- * @type {String}
- */
-const JOURNAL_SERVER_SERVICE_TYPE = 'ws';
-
-/**
- * Name of Journal Event that first gives us the CMDR name
- * @type {String}
- */
-const EVENT_FOR_COMMANDER_NAME = 'LoadGame';
-
-/**
- * Time to pass to watcher for polling interval
- * @type {Number}
- */
-const JOURNAL_WATCH_INTERVAL = 100;
-
-/**
- * Interval to use for server heartbeat broadcast
- * @type {Number}
- * @description 1 minute
- */
-const SERVER_HEARTBEAT_INTERVAL = 60000;
-
-/**
- * Default configuration Object for our constructor
- * @type {Object}
- */
-const DEFAULT_CONFIG = {
-  port: JOURNAL_SERVER_PORT,
-  journalPath: JOURNAL_DIR,
-  serviceName: JOURNAL_SERVER_SERVICE_NAME,
-  discovery: true,
-  headers: {},
-  interval: JOURNAL_WATCH_INTERVAL,
-  heartbeat: {
-    interval: SERVER_HEARTBEAT_INTERVAL,
-  },
-};
+// configuration
+const CONFIG = require('./defaults');
+const { EVENT_FOR_COMMANDER_NAME } = require('./constants');
 
 
 /**
@@ -101,25 +35,51 @@ class EliteDangerousJournalServer {
    * Creates an instance of EliteDangerousJournalServer.
    * @param {Object} [config={}] Journal Server configuration
    *  @param {Number} [config.port] port to use for sockets
-   *  @param {String} [config.journalPath] path to watch; should be Journal directory
    *  @param {String} [config.id] unique id for Journal Server
-   *  @param {String} [config.serviceName] name for Bonjour service
-   *  @param {Boolean} [config.discovery] enable/disable network discovery
-   *  @param {Object} [config.headers] custom headers to merge with our broadcast headers
-   *  @param {Number} [config.interval] time for polling Journal Directory
+   *  @param {Object} [config.watcher] watcher configuration
+   *    @param {String} [config.watcher.path] path to watch; should be Journal directory
+   *    @param {Number} [config.watcher.interval] time for polling Journal Directory
+   *    @param {RegEx} [config.watcher.fileRegEx] RegEx for Journal file names
+   *  @param {Object} [config.discovery] network discovery configuration
+   *    @param {Boolean} [config.discovery.enabled] enable/disable network discovery
+   *    @param {String} [config.discovery.serviceName] name for Bonjour service
+   *    @param {String} [config.discovery.serviceType] type of service to broadcast
    *  @param {Object} [config.heartbeat] Object for configuring WebSocket heartbeat
    *    @param {Number} [config.heartbeat.interval] time between heartbeat pings
+   *  @param {Object} [config.registration] Object for configuring client registration
+   *    @param {Boolean} [config.registration.enabled] enable/disable registration
+   *    @param {Boolean} [config.registration.force] force clients to register
+   *    @param {String} [config.registration.messageType] what type of message should the
+   *    client send to register
+   *  @param {Object} [config.subscriptions] Object for configuring client subscriptions
+   *    @param {Boolean} [config.subscriptions.enabled] enable/disable subscriptions
+   *    @param {Array} [config.subscriptions.subscribeTo] Array of default events to subscribe to
+   *    @param {String} [config.subscriptions.messageType] what type of message should the
+   *    client send to update their subscriptions
+   *  @param {Object} [config.errors] Object for configuring error responses
+   *    @param {Object} [config.errors.mustRegister] Object for configuring registration error
+   *      @param {String} [config.errors.mustRegister.message] error message for registration
+   *      @param {String} [config.errors.mustRegister.code] error code to send
+   *    @param {Object} [config.errors.invaldMessage] Object for configuring messaging error
+   *      @param {String} [config.errors.invaldMessage.message] error message for messaging
+   *      @param {String} [config.errors.invaldMessage.code] error code to send
+   *    @param {Object} [config.errors.invaldPayload] Object for configuring payload error
+   *      @param {String} [config.errors.invaldPayload.message] error message for payload
+   *      @param {String} [config.errors.invaldPayload.code] error code to send
+   *  @param {Object} [config.headers] custom headers to merge with our broadcast headers
    * @memberof EliteDangerousJournalServer
    */
   constructor(config = {}) {
-    // generate UUID for server
-    const idObj = { id: uuid() };
-
     // if only a port was provided, create an Object we can use to merge
-    const mergeConfig = (_.isNumber(config)) ? { port: config } : config;
+    const mergeConfig = (isNumber(config)) ? { port: config } : config;
 
     // merge provided config with default config
-    this.config = Object.assign({}, DEFAULT_CONFIG, idObj, mergeConfig);
+    this.config = merge({}, CONFIG, mergeConfig);
+
+    // if no id was provided, generate one
+    if (!this.config.id) {
+      this.config.id = uuid();
+    }
 
     // initialize class properties
     this.currentLine = 0;
@@ -128,7 +88,21 @@ class EliteDangerousJournalServer {
     this.currentHeader = {};
     this.clientSubscriptions = {};
     this.commander = null;
-    this.journalRegEx = JOURNAL_FILE_REGEX;
+    this.validMessageTypes = [];
+
+    const { subscriptions, registration } = this.config;
+
+    if (registration.force) {
+      this.config.registration.enabled = true;
+    }
+
+    if (subscriptions.enabled) {
+      this.validMessageTypes.push(subscriptions.messageType);
+    }
+
+    if (registration.enabled) {
+      this.validMessageTypes.push(registration.messageType);
+    }
   }
 
   /**
@@ -139,7 +113,7 @@ class EliteDangerousJournalServer {
     // store start time for uptime calculations
     this.creation = moment();
 
-    console.log(`${chalk.gray(`o7  Wecome to ${this.config.serviceName} version ${packageJSON.version}`)}`);
+    console.log(`${chalk.gray(`o7  Wecome to ${this.config.discovery.serviceName} version ${packageJSON.version}`)}`);
 
     // get port and id from our config
     // destructuring them here just allows us to use the Object shorthand in our
@@ -174,31 +148,30 @@ class EliteDangerousJournalServer {
     const {
       port,
       id,
-      serviceName,
       discovery,
-      journalPath,
+      watcher,
       heartbeat,
     } = this.config;
 
     console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
 
-    if (discovery) {
+    if (discovery.enabled) {
       // publish service for discovery
       this.discovery = zeroconf.publish({
-        name: serviceName,
-        type: JOURNAL_SERVER_SERVICE_TYPE,
+        name: discovery.serviceName,
+        type: discovery.serviceType,
         txt: { id, version: packageJSON.version },
         port,
       });
 
-      console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(serviceName)} ${chalk.green('for discovery...')}`);
+      console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(discovery.serviceName)} ${chalk.green('for discovery...')}`);
     }
 
     // initialize our heartbeat ping interval
     setInterval(this.heartbeat.bind(this), heartbeat.interval);
 
     // index available Journal files
-    dir.files(journalPath, this.indexJournals.bind(this));
+    dir.files(watcher.path, this.indexJournals.bind(this));
   }
 
   /**
@@ -220,8 +193,10 @@ class EliteDangerousJournalServer {
         // get client id
         const { journalServerUUID } = socket;
 
-        // remove client subscriptions
-        this.clientSubscriptions = _.omit(this.clientSubscriptions, journalServerUUID);
+        if (this.config.subsctions.enabled) {
+          // remove client subscriptions
+          this.clientSubscriptions = omit(this.clientSubscriptions, journalServerUUID);
+        }
 
         // terminate our socket connection
         socket.terminate();
@@ -250,6 +225,28 @@ class EliteDangerousJournalServer {
     process.on('SIGINT', this.shutdown.bind(this));
   }
 
+  validateClientStatus(client) {
+    const { registration: { force } } = this.config;
+
+    const { journalServerClientName: clientName } = client;
+
+    return (!force) || (force && clientName);
+  }
+
+  websocketError(client, errorObject = {}, suppressHeaders = false) {
+    let errorData = {
+      error: true,
+    };
+
+    if (errorObject) {
+      const { message, code } = errorObject;
+
+      errorData = merge({}, errorData, { message, code });
+    }
+
+    client.send(this.formatDataForSocket(errorData, client, suppressHeaders));
+  }
+
   /**
    * Handles listening for connections and messages from Clients
    * @param {Object} ws WebSocket Object from WebSocket Server connection
@@ -262,33 +259,27 @@ class EliteDangerousJournalServer {
     // get refernce to socket to satisfy eslint rules about assigning to arguments
     const socket = ws;
 
+    // get relevant configuration for subscriptions, registration, and error messaging
+    const {
+      subscriptions,
+      registration,
+      errors: {
+        mustRegister,
+        invalidMessage,
+        invalidPayload,
+      },
+    } = this.config;
+
     // attach the clientID to the socket client
     socket.journalServerUUID = clientID;
 
+    // set name to null until registered
+    // also check to make sure client isn't already been registered
+    // this could be done by the application using this Journal Server
+    socket.journalServerClientName = socket.journalServerClientName || null;
+
     // set our heartbeat property
     socket.isReceiving = true;
-
-    // subscribe the client to our default broadcasts
-    this.clientSubscriptions[clientID] = DEFAULT_EVENT_SUBSCRIPTIONS;
-
-    // handle messages from the client
-    socket.on('message', (data) => {
-      const { type, payload } = JSON.parse(data);
-
-      if (type === 'subscribe' && payload) {
-        this.clientSubscriptions[clientID] = payload;
-
-        // send the client their subscription data
-        socket.send(this.formatDataForSocket({}, clientID));
-
-        console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('updated subscription')}`);
-      } else {
-        socket.send(this.formatDataForSocket({ error: true }, clientID));
-      }
-    });
-
-    // send the client the current header on successful connection
-    socket.send(this.formatDataForSocket(this.currentHeader), clientID);
 
     // set up ping listener
     socket.on('pong', () => {
@@ -298,15 +289,114 @@ class EliteDangerousJournalServer {
 
     // handle client disconnection
     socket.on('close', () => {
-      // remove client subscriptions
-      this.clientSubscriptions = _.omit(this.clientSubscriptions, clientID);
+      // get client name if one exists
+      const { journalServerClientName: clientName = '' } = socket;
 
-      console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
+      if (subscriptions.enabled) {
+        // remove client subscriptions
+        this.clientSubscriptions = omit(this.clientSubscriptions, clientID);
+      }
+
+      console.log(`${chalk.cyan('Client')} ${chalk.red(clientName || clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
       console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
     });
 
     console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('connected via Web Socket.')}`);
     console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
+
+    // if we are allowing subscriptions or registration
+    // we'll need to configure some things and listen for messages
+    // otherwise we can just ignore messages from clients entirely
+    if (subscriptions.enabled || registration.enabled) {
+      // if subscriptions are enabled
+      if (subscriptions.enabled) {
+        // subscribe the client to our default broadcasts
+        this.clientSubscriptions[clientID] = subscriptions.subscribeTo;
+      }
+
+      // handle messages from the client
+      socket.on('message', (data) => {
+        const { type, payload = {} } = JSON.parse(data);
+
+        // make sure this is a message type we are handling
+        if (this.validMessageTypes.indexOf(type) !== -1 && payload) {
+          // if this is a registration message
+          if (type === registration.messageType && registration.enabled) {
+            // get client name and possible subscription data from payload
+            const { subscribeTo = {} } = payload;
+
+            let { clientName } = payload;
+
+            clientName = formatClientName(clientName);
+
+            if (clientName) {
+              // add client name to socket client
+              socket.journalServerClientName = clientName;
+
+              console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('registered as')} ${chalk.red(clientName)}`);
+
+              // if subscriptions are enabled and the client included a subscribeTo Array in payload
+              if (subscriptions.enabled && Array.isArray(subscribeTo)) {
+                // subscribe the client to desired events
+                this.clientSubscriptions[clientID] = subscribeTo;
+
+                console.log(`${chalk.cyan('Client')} ${chalk.red(clientName)} ${chalk.cyan('updated subscription')}`);
+              }
+
+              // send the client the current header
+              return socket.send(this.formatDataForSocket(this.currentHeader, socket));
+            }
+
+            if (!this.validateClientStatus(socket)) {
+              return this.websocketError(socket, mustRegister, true);
+            }
+
+            return this.websocketError(socket, invalidPayload, true);
+          // if this is a subscription message
+          } else if (type === subscriptions.messageType && subscriptions.enabled) {
+            // get client name from socket if it exists
+            const { journalServerClientName: clientName } = socket;
+
+            // check client status
+            if (this.validateClientStatus(socket)) {
+              if (!Array.isArray(payload)) {
+                return this.websocketError(socket, invalidPayload);
+              }
+
+              // update subscriptions with desired Journal Events
+              this.clientSubscriptions[clientID] = payload;
+
+              // send the client their subscription data
+              socket.send(this.formatDataForSocket(this.currentHeader, socket));
+
+              console.log(`${chalk.cyan('Client')} ${chalk.red(clientName || clientID)} ${chalk.cyan('updated subscription')}`);
+            // if this client needs to register
+            } else {
+              // let the client know they need to register
+              return this.websocketError(socket, mustRegister, true);
+            }
+          }
+        // if this is an invalid message type
+        } else {
+          // let the client know this isn't a supported message type
+          return this.websocketError(socket, invalidMessage);
+        }
+
+        return false;
+      });
+
+      // check client status
+      if (!this.validateClientStatus(socket)) {
+        // let client know they need to register
+        return this.websocketError(socket, mustRegister, true);
+      }
+
+      // send the client the current header on successful connection
+      return socket.send(this.formatDataForSocket(this.currentHeader, socket));
+    }
+
+    // send the client the current header on successful connection
+    return socket.send(this.formatDataForSocket(this.currentHeader, socket));
   }
 
   /**
@@ -319,23 +409,39 @@ class EliteDangerousJournalServer {
     if (data) {
       console.log(`${chalk.gray('Broadcasting event')} ${chalk.green(data.event)}:${chalk.yellow(data.timestamp)}`);
 
+      const { subscriptions, registration } = this.config;
+
       // iterate through connected clients and send message to each one
       this.server.clients.forEach((client) => {
-        const { readyState, journalServerUUID } = client;
-        // make sure client is listening and we have a Journal Server Client ID
-        if (readyState === WebSocket.OPEN && this.clientSubscriptions[journalServerUUID]) {
-          // get string for ALL events
-          const [ALL_EVENTS] = DEFAULT_EVENT_SUBSCRIPTIONS;
+        // get id, name, and connection status from client
+        const {
+          readyState,
+          journalServerUUID: clientID,
+          journalServerClientName: clientName,
+        } = client;
 
-          // is the client subscribed to all broadcasts?
-          const allSubbed = this.clientSubscriptions[journalServerUUID].indexOf(ALL_EVENTS) !== -1;
+        // make sure client is listening
+        if (readyState === WebSocket.OPEN) {
+          // if client is registered or registration is not required
+          if ((!registration.force) || (registration.force && clientName)) {
+            // if subscriptions are enabled
+            if (subscriptions.enabled && this.clientSubscriptions[clientID]) {
+              const { subscribeTo: defaults } = subscriptions;
+              // is the client subscribed to all broadcasts?
+              const allSubbed = this.clientSubscriptions[clientID].indexOf(defaults) !== -1;
 
-          // is the client subscribed to this broadcast?
-          const thisSubbed = this.clientSubscriptions[journalServerUUID].indexOf(data.event) !== -1;
+              // is the client subscribed to this broadcast?
+              const thisSubbed = this.clientSubscriptions[clientID].indexOf(data.event) !== -1;
 
-          // check subscription and emit event
-          if (allSubbed || thisSubbed) {
-            client.send(this.formatDataForSocket(data, client.journalServerUUID));
+              // check subscription and emit event
+              if ((allSubbed) || (thisSubbed)) {
+                // broadcast event to the client
+                client.send(this.formatDataForSocket(data, client));
+              }
+            // if subscriptions are disabled; always emit the event
+            } else {
+              client.send(this.formatDataForSocket(data, client));
+            }
           }
         }
       });
@@ -345,23 +451,36 @@ class EliteDangerousJournalServer {
   /**
    * Normalizes provided data for transmission via WebSocket
    * @param {any} data the data to format for transmission
+   * @param {Object} client the WebSocket client
+   * @param {Boolean} [suppressHeaders=false] should we suppress our headers
    * @returns {String}
    * @memberof EliteDangerousJournalServer
    */
-  formatDataForSocket(payload, clientID) {
+  formatDataForSocket(payload, client, suppressHeaders = false) {
+    // get relevant data from client
+    const { journalServerUUID: clientID, journalServerClientName: clientName } = client;
+
     // header data for Journal Server payload
     const journalServerHeaders = {
       journalServer: this.config.id,
       journal: path.basename(this.currentJournal),
       subscribedTo: this.clientSubscriptions[clientID],
       commander: this.commander,
-      clientID,
       serverVersion: packageJSON.version,
+      clientID,
+      clientName,
     };
 
-    const send = Object.assign({}, this.config.headers, journalServerHeaders, { payload });
+    // merge custom headers with server headers and payload
+    let send;
 
-    // we can only send Strings so we need to stringify
+    if (suppressHeaders) {
+      send = Object.assign({}, { payload });
+    } else {
+      send = Object.assign({}, this.config.headers, journalServerHeaders, { payload });
+    }
+
+    // stringify so we are just sending a String to client
     return JSON.stringify(send).trim();
   }
 
@@ -388,8 +507,10 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   newJournalCreated(journalPath) {
+    const { watcher } = this.config;
+
     // ensure the new file was an actual Journal file
-    if (this.journalRegEx.test(path.basename(journalPath))) {
+    if (watcher.fileRegEx.test(path.basename(journalPath))) {
       // reset current line position
       this.currentLine = 0;
 
@@ -466,7 +587,7 @@ class EliteDangerousJournalServer {
   indexJournals(error, files) {
     // if we can't index any files
     if (error) {
-      console.log(`${chalk.red('Could not find Journals in')} ${chalk.magenta(this.config.journalPath)}`);
+      console.log(`${chalk.red('Could not find Journals in')} ${chalk.magenta(this.config.watcher.path)}`);
       throw error;
     }
 
@@ -479,16 +600,16 @@ class EliteDangerousJournalServer {
     console.log(`${chalk.green('Indexed Journals in')} ${chalk.magenta(this.config.journalPath)}`);
 
     // get polling interval
-    const { interval } = this.config;
+    const { interval, path: journalPath } = this.config.watcher;
 
     // start watching our Journal directory for modifications
-    this.journalWatcher = chokidar.watch([this.config.journalPath, this.currentJournal], {
+    this.journalWatcher = chokidar.watch([journalPath, this.currentJournal], {
       // because of the way E:D writes to Journals, we need to use polling
       usePolling: true,
       interval,
     });
 
-    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.config.journalPath)}`);
+    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(journalPath)}`);
     console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.currentJournal)}`);
 
     // set up our event handlers
@@ -503,11 +624,13 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   sortJournals(journals = []) {
+    const { watcher } = this.config;
+
     return journals
       // filter to make sure we are only looking at Journal files
       // this also has the added benefit of letting us sort the filtered Array
       // without mutating the original Array of files
-      .filter(file => this.journalRegEx.test(path.basename(file)))
+      .filter(file => watcher.fileRegEx.test(path.basename(file)))
       // sort by datestamp and part to make sure we have the most recent Journal
       .sort((a, b) => {
         // split Journal names so we can look at datestamp and part as necessary

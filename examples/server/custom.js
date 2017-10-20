@@ -14,10 +14,20 @@ const interval = 1000;
 
 const config = {
   port,
-  serviceName,
   id,
   headers,
-  interval,
+  watcher: {
+    interval,
+  },
+  subscriptions: {
+    enabled: true,
+  },
+  discovery: {
+    serviceName,
+  },
+  registration: {
+    force: true,
+  },
 };
 
 const JournalServer = new EliteDangerousJournalServer(config);
