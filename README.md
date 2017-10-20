@@ -55,7 +55,7 @@ npm install --save @dvdagames/elite-dangerous-journal-server
 ### Server
 
 The server Class does not require any parameters, but has an optional configuration
-Object:
+Object that currently supports the following properties:
 
 - **port**: `Number` listen for socket connections on a specific port; defaults to `31337`
 - **journalPath**: `String` path to Elite Dangerous Journal directory; defaults to
@@ -64,9 +64,12 @@ Object:
 - **serviceName**: `String` name for network discovery service; defaults to
 `Elite Dangerous Journal Server`
 - **discovery**: `Boolean` should network discovery be enabled; defaults to `true`
-- **headers**: `Object` an optional Object of headers you'd like added to the broadcast;
+- **headers**: `Object` an optional Object of arbitraty headers you'd like added to the broadcast;
 these properties will exist in the broadcast data outside of the `payload` property which
-will contain the Journal Event.
+will contain the Journal Event
+- **interval**: `Number` what interval should our watcher use for polling for Journal updates
+- **heartbeat**: `Object` configuration for heartbeat pings; currently only supports one property
+  - **interval**: `Number` how long between heartbeat pings
 
 **NOTE**: If only providing a `port` you can just pass the `Number` into the constructor
 and don't need to provide a configuration Object.
@@ -74,6 +77,7 @@ and don't need to provide a configuration Object.
 **NOTE**: If the `headers` property contains any of the default header properties
 that the Journal Server already plans to send, those headers will be overwritten by
 the default headers.
+
 
 #### Basic Server Example
 
@@ -84,6 +88,7 @@ const JournalServer = new EliteDangerousJournalServer();
 
 JournalServer.init();
 ```
+
 
 #### Custom Port
 
@@ -96,6 +101,7 @@ const JournalServer = new EliteDangerousJournalServer(port);
 
 JournalServer.init();
 ```
+
 
 #### Custom Config
 
@@ -115,6 +121,7 @@ const JournalServer = new EliteDangerousJournalServer(config);
 
 JournalServer.init();
 ```
+
 
 ### Client
 
@@ -138,6 +145,7 @@ the Journal Server
 and will be the following Object if the client sends an invalid message: `{ error: true }`.
 In every other case it will contain the JSON-lines Object for that Journal Event.
 
+
 #### Basic Example
 
 ```javascript
@@ -157,6 +165,7 @@ socket.on('message', (data) => {
   }
 });
 ```
+
 
 #### Subscribing to Specific Journal Events
 
@@ -181,6 +190,7 @@ socket.on('message', (data) => {
   console.log(`CMDR: ${payload.event}`);
 });
 ```
+
 
 #### Network Discovery
 

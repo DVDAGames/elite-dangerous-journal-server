@@ -69,6 +69,13 @@ const EVENT_FOR_COMMANDER_NAME = 'LoadGame';
 const JOURNAL_WATCH_INTERVAL = 100;
 
 /**
+ * Interval to use for server heartbeat broadcast
+ * @type {Number}
+ * @description 1 minute
+ */
+const SERVER_HEARTBEAT_INTERVAL = 60000;
+
+/**
  * Default configuration Object for our constructor
  * @type {Object}
  */
@@ -79,23 +86,29 @@ const DEFAULT_CONFIG = {
   discovery: true,
   headers: {},
   interval: JOURNAL_WATCH_INTERVAL,
+  heartbeat: {
+    interval: SERVER_HEARTBEAT_INTERVAL,
+  },
 };
 
 
 /**
+ * Creates a WebSocket server that broadcasts Elite Dangerous Journal Events
  * @class EliteDangerousJournalServer
- * @desc Creates a WebSocket server that broadcasts Elite Dangerous Journal Events
  */
 class EliteDangerousJournalServer {
   /**
    * Creates an instance of EliteDangerousJournalServer.
    * @param {Object} [config={}] Journal Server configuration
-   *  @param {Number} [config.port=JOURNAL_SERVER_PORT] port to use for sockets
-   *  @param {String} [config.journalPath=JOURNAL_DIR] path to watch; should be Journal directory
-   *  @param {String} [config.id=uuid()] unique id for Journal Server
-   *  @param {String} [config.serviceName=JOURNAL_SERVER_SERVICE_NAME] name for Bonjour service
-   *  @param {Boolean} [config.discovery=true] enable/disable network discovery
-   *  @param {Object} [config.headers={}] custom headers to merge with our broadcast headers
+   *  @param {Number} [config.port] port to use for sockets
+   *  @param {String} [config.journalPath] path to watch; should be Journal directory
+   *  @param {String} [config.id] unique id for Journal Server
+   *  @param {String} [config.serviceName] name for Bonjour service
+   *  @param {Boolean} [config.discovery] enable/disable network discovery
+   *  @param {Object} [config.headers] custom headers to merge with our broadcast headers
+   *  @param {Number} [config.interval] time for polling Journal Directory
+   *  @param {Object} [config.heartbeat] Object for configuring WebSocket heartbeat
+   *    @param {Number} [config.heartbeat.interval] time between heartbeat pings
    * @memberof EliteDangerousJournalServer
    */
   constructor(config = {}) {
@@ -164,6 +177,7 @@ class EliteDangerousJournalServer {
       serviceName,
       discovery,
       journalPath,
+      heartbeat,
     } = this.config;
 
     console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
@@ -180,10 +194,46 @@ class EliteDangerousJournalServer {
       console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(serviceName)} ${chalk.green('for discovery...')}`);
     }
 
+    // initialize our heartbeat ping interval
+    setInterval(this.heartbeat.bind(this), heartbeat.interval);
+
     // index available Journal files
     dir.files(journalPath, this.indexJournals.bind(this));
   }
 
+  /**
+   * Pings all clients for heartbeat response
+   * @memberof EliteDangerousJournalServer
+   */
+  heartbeat() {
+    // iterate through connected clients and send ping to each one
+    this.server.clients.forEach((client) => {
+      // get reference to client so we aren't mutating function argument directly
+      // because eslint doesn't like that
+      const socket = client;
+
+      // get property set by our client's heartbeat
+      const { isReceiving } = socket;
+
+      // if our last heartbeat wasn't returned
+      if (!isReceiving) {
+        // get client id
+        const { journalServerUUID } = socket;
+
+        // remove client subscriptions
+        this.clientSubscriptions = _.omit(this.clientSubscriptions, journalServerUUID);
+
+        // terminate our socket connection
+        socket.terminate();
+      } else {
+        // reset isReceiving so we can test the client's connection
+        socket.isReceiving = false;
+
+        // send a ping
+        socket.ping('', false, true);
+      }
+    });
+  }
 
   /**
    * Configures event handling for EliteDangerousJournalServer instance
@@ -215,32 +265,41 @@ class EliteDangerousJournalServer {
     // attach the clientID to the socket client
     socket.journalServerUUID = clientID;
 
+    // set our heartbeat property
+    socket.isReceiving = true;
+
     // subscribe the client to our default broadcasts
     this.clientSubscriptions[clientID] = DEFAULT_EVENT_SUBSCRIPTIONS;
 
     // handle messages from the client
-    ws.on('message', (data) => {
+    socket.on('message', (data) => {
       const { type, payload } = JSON.parse(data);
 
       if (type === 'subscribe' && payload) {
         this.clientSubscriptions[clientID] = payload;
 
         // send the client their subscription data
-        ws.send(this.formatDataForSocket({}, clientID));
+        socket.send(this.formatDataForSocket({}, clientID));
 
         console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('updated subscription')}`);
       } else {
-        ws.send(this.formatDataForSocket({ error: true }, clientID));
+        socket.send(this.formatDataForSocket({ error: true }, clientID));
       }
     });
 
     // send the client the current header on successful connection
-    ws.send(this.formatDataForSocket(this.currentHeader), clientID);
+    socket.send(this.formatDataForSocket(this.currentHeader), clientID);
+
+    // set up ping listener
+    socket.on('pong', () => {
+      // we're still listening
+      socket.isReceiving = true;
+    });
 
     // handle client disconnection
-    ws.on('close', () => {
+    socket.on('close', () => {
       // remove client subscriptions
-      this.clientSubscriptions = _.omit(clientID);
+      this.clientSubscriptions = _.omit(this.clientSubscriptions, clientID);
 
       console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
       console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
@@ -602,7 +661,6 @@ class EliteDangerousJournalServer {
     // end execution
     process.exit();
   }
-
 }
 
 module.exports = EliteDangerousJournalServer;
