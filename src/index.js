@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { createServer } = require('http');
+const { EventEmitter } = require('events');
 
 // package.json for version number and such
 const packageJSON = require('../package.json');
@@ -14,12 +15,11 @@ const zeroconf = require('bonjour')();
 const dir = require('node-dir');
 const chokidar = require('chokidar');
 const moment = require('moment');
-const chalk = require('chalk');
 const uuid = require('uuid/v1');
 const { merge, omit, isNumber } = require('lodash');
 
 // utilities
-const { formatClientName } = require('./utilities');
+const { formatClientName, formatLog } = require('./utilities');
 
 // configuration
 const CONFIG = require('./defaults');
@@ -89,6 +89,7 @@ class EliteDangerousJournalServer {
     this.clientSubscriptions = {};
     this.commander = null;
     this.validMessageTypes = [];
+    this.emitter = new EventEmitter();
 
     const { subscriptions, registration } = this.config;
 
@@ -113,19 +114,17 @@ class EliteDangerousJournalServer {
     // store start time for uptime calculations
     this.creation = moment();
 
-    console.log(`${chalk.gray(`o7  Wecome to ${this.config.discovery.serviceName} version ${packageJSON.version}`)}`);
-
     // get port and id from our config
     // destructuring them here just allows us to use the Object shorthand in our
-    const {
-      port,
-      id,
-    } = this.config;
+    const { port } = this.config;
 
     // start http server to attach our socket server to
     this.httpServer = createServer();
 
-    console.log(`${chalk.green('Journal Server')} ${chalk.blue(id)} ${chalk.green(`created on ${this.creation.format('YYYY-MM-DD HH:mm:ss')}`)}`);
+    this.emitter.emit('hello');
+
+    // display server welcome message
+    this.welcomeMessage();
 
     // initialize WebSocket Server
     this.server = new WebSocket.Server({ server: this.httpServer });
@@ -153,18 +152,27 @@ class EliteDangerousJournalServer {
       heartbeat,
     } = this.config;
 
-    console.log(`${chalk.green('Listening for Web Socket Connections on port')} ${chalk.blue(port)}${chalk.green('...')}`);
+    // display server listening message
+    this.listeningMessage();
 
+    this.emitter.emit('listening', { port, id });
+
+    // if we are supporting Network Discovery
     if (discovery.enabled) {
-      // publish service for discovery
-      this.discovery = zeroconf.publish({
+      const serviceDetails = {
         name: discovery.serviceName,
         type: discovery.serviceType,
         txt: { id, version: packageJSON.version },
         port,
-      });
+      };
 
-      console.log(`${chalk.green('Broadcasting service')} ${chalk.blue(discovery.serviceName)} ${chalk.green('for discovery...')}`);
+      // publish service for discovery
+      this.discovery = zeroconf.publish(serviceDetails);
+
+      // display server discovery status message
+      this.discoveryMessage();
+
+      this.emitter.emit('published', serviceDetails);
     }
 
     // initialize our heartbeat ping interval
@@ -281,6 +289,8 @@ class EliteDangerousJournalServer {
     // set our heartbeat property
     socket.isReceiving = true;
 
+    this.emitter.emit('clientConnected', socket);
+
     // set up ping listener
     socket.on('pong', () => {
       // we're still listening
@@ -297,12 +307,14 @@ class EliteDangerousJournalServer {
         this.clientSubscriptions = omit(this.clientSubscriptions, clientID);
       }
 
-      console.log(`${chalk.cyan('Client')} ${chalk.red(clientName || clientID)} ${chalk.cyan('disconnected from Web Socket.')}`);
-      console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
+      // display client disconnect message
+      this.clientConnectionMessage(clientName || clientID, false);
+
+      this.emitter.emit('clientDisconnected', socket);
     });
 
-    console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('connected via Web Socket.')}`);
-    console.log(`${chalk.green('Total clients:')} ${chalk.blue(this.server.clients.size)}`);
+    // display client connected message
+    this.clientConnectionMessage(clientID);
 
     // if we are allowing subscriptions or registration
     // we'll need to configure some things and listen for messages
@@ -317,6 +329,8 @@ class EliteDangerousJournalServer {
       // handle messages from the client
       socket.on('message', (data) => {
         const { type, payload = {} } = JSON.parse(data);
+
+        this.emitter.emit('messageReceived', JSON.parse(data));
 
         // make sure this is a message type we are handling
         if (this.validMessageTypes.indexOf(type) !== -1 && payload) {
@@ -333,14 +347,16 @@ class EliteDangerousJournalServer {
               // add client name to socket client
               socket.journalServerClientName = clientName;
 
-              console.log(`${chalk.cyan('Client')} ${chalk.red(clientID)} ${chalk.cyan('registered as')} ${chalk.red(clientName)}`);
+              // display client registration message
+              this.registrationMessage(socket);
 
               // if subscriptions are enabled and the client included a subscribeTo Array in payload
               if (subscriptions.enabled && Array.isArray(subscribeTo)) {
                 // subscribe the client to desired events
                 this.clientSubscriptions[clientID] = subscribeTo;
 
-                console.log(`${chalk.cyan('Client')} ${chalk.red(clientName)} ${chalk.cyan('updated subscription')}`);
+                // display subscription updated message
+                this.subscriptionMessage(socket);
               }
 
               // send the client the current header
@@ -354,9 +370,6 @@ class EliteDangerousJournalServer {
             return this.websocketError(socket, invalidPayload, true);
           // if this is a subscription message
           } else if (type === subscriptions.messageType && subscriptions.enabled) {
-            // get client name from socket if it exists
-            const { journalServerClientName: clientName } = socket;
-
             // check client status
             if (this.validateClientStatus(socket)) {
               if (!Array.isArray(payload)) {
@@ -369,7 +382,8 @@ class EliteDangerousJournalServer {
               // send the client their subscription data
               socket.send(this.formatDataForSocket(this.currentHeader, socket));
 
-              console.log(`${chalk.cyan('Client')} ${chalk.red(clientName || clientID)} ${chalk.cyan('updated subscription')}`);
+              // display subscription updated message
+              this.subscriptionMessage(socket);
             // if this client needs to register
             } else {
               // let the client know they need to register
@@ -407,9 +421,11 @@ class EliteDangerousJournalServer {
   broadcast(data) {
     // make sure we were given a message
     if (data) {
-      console.log(`${chalk.gray('Broadcasting event')} ${chalk.green(data.event)}:${chalk.yellow(data.timestamp)}`);
+      this.broadcastingMessage(data);
 
       const { subscriptions, registration } = this.config;
+
+      this.emitter.emit('broadcasting', data);
 
       // iterate through connected clients and send message to each one
       this.server.clients.forEach((client) => {
@@ -517,7 +533,10 @@ class EliteDangerousJournalServer {
       // stop watching old journal
       this.journalWatcher.unwatch(this.currentJournal);
 
-      console.log(`${chalk.green('No longer broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
+      this.emitter.emit('stoppedWatching', this.currentJournal);
+
+      // display no longer watching message
+      this.journalWatchingMessage(this.currentJournal, 'broadcasting', false);
 
       // add Journal path to start of Journals Array
       this.journals.unshift(journalPath);
@@ -528,7 +547,10 @@ class EliteDangerousJournalServer {
       // stop watching old journal
       this.journalWatcher.add(this.currentJournal);
 
-      console.log(`${chalk.green('Now broadcasting changes to')} ${chalk.magenta(this.currentJournal)}`);
+      this.emitter.emit('startedWatching', this.currentJournal);
+
+      // display currently watching message
+      this.journalWatchingMessage(this.currentJournal, 'broadcasting');
 
       // retrieve Journal entries from the Journal file
       this.getJournalContents();
@@ -544,9 +566,9 @@ class EliteDangerousJournalServer {
   journalEvent(event, filepath) {
     // make sure we're seeing a change to our current Journal
     if (event === 'change' && filepath === this.currentJournal) {
+      this.emitter.emit('journalUpdated', event);
+
       this.getJournalUpdate();
-    } else {
-      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occured for`)} ${chalk.magenta(filepath)}`);
     }
   }
 
@@ -587,7 +609,9 @@ class EliteDangerousJournalServer {
   indexJournals(error, files) {
     // if we can't index any files
     if (error) {
-      console.log(`${chalk.red('Could not find Journals in')} ${chalk.magenta(this.config.watcher.path)}`);
+      // display error message
+      this.filePathMessage(this.congif.watcher.path, 'Could not find Journals in');
+
       throw error;
     }
 
@@ -597,7 +621,8 @@ class EliteDangerousJournalServer {
     // the first item in our Array should be our current journal
     [this.currentJournal] = this.journals;
 
-    console.log(`${chalk.green('Indexed Journals in')} ${chalk.magenta(this.config.journalPath)}`);
+    // display successful indexing message
+    this.filePathMessage(this.config.journalPath, 'Indexed Journals in');
 
     // get polling interval
     const { interval, path: journalPath } = this.config.watcher;
@@ -609,8 +634,8 @@ class EliteDangerousJournalServer {
       interval,
     });
 
-    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(journalPath)}`);
-    console.log(`${chalk.green('Watching for changes to')} ${chalk.magenta(this.currentJournal)}`);
+    this.journalWatchingMessage(journalPath);
+    this.journalWatchingMessage(this.currentJournal);
 
     // set up our event handlers
     this.bindEvents();
@@ -689,7 +714,10 @@ class EliteDangerousJournalServer {
     // increment our line counter so we know our place in the Journal content
     this.currentLine = this.currentLine + 1;
 
-    console.log(`${chalk.green('Stored new Journal header for')} ${chalk.magenta(path.basename(this.currentJournal))}`);
+    this.emitter.emit('journalHeader', this.currentHeader);
+
+    // display new header message
+    this.filePathMessage(path.basename(this.currentJournal), 'Stored new Journal header for');
 
     // return our headerless content
     return lines;
@@ -711,6 +739,8 @@ class EliteDangerousJournalServer {
       if (formattedEntry) {
         // add entry to our Array
         this.entries.push(formattedEntry);
+
+        this.emitter.emit('newEntry', formattedEntry);
 
         // get commander name from the LoadGame event
         // this could run if the names are the same, but since it's just assigning
@@ -735,7 +765,9 @@ class EliteDangerousJournalServer {
    * @memberof EliteDangerousJournalServer
    */
   shutdown() {
-    console.log(`${chalk.red('Journal Server shutting down...')}`);
+    this.emitter.emit('shuttingDown');
+
+    this.shutdownMessage('Shutting down...');
 
     // check to see if we need to unpublish network discovery service
     if (this.config.discovery) {
@@ -755,7 +787,7 @@ class EliteDangerousJournalServer {
       // destroy service
       zeroconf.destroy();
 
-      console.log(`${chalk.gray('Unpublishing discovery service...')}`);
+      this.shutdownMessage('Unpublishing service...');
 
       // continue with rest of shutdown procedure
       this.shutdownWithoutDiscovery();
@@ -770,19 +802,283 @@ class EliteDangerousJournalServer {
     // destroy WebSocket Server
     this.server.close();
 
-    console.log(`${chalk.gray('Muting Web Socket listener...')}`);
+    this.shutdownMessage('Muting Web Socket listener...');
 
     // destroy http server
     this.httpServer.close();
 
-    console.log(`${chalk.gray('Shutting down HTTP server...')}`);
+    this.shutdownMessage('Shutting down HTTP server...');
 
-    console.log(`${chalk.gray(`Server uptime was ${moment().diff(this.creation, 'hours')} hours`)}`);
+    this.upTimeMessage();
 
-    console.log(`${chalk.gray('Good bye.  o7')}`);
+    this.shutdownMessage('Good bye.\no7');
+
+    this.emitter.emit('goodbye');
 
     // end execution
     process.exit();
+  }
+
+  welcomeMessage() {
+    const { discovery } = this.config;
+
+    const welcomeMessageObject = {
+      serviceName: {
+        type: 'name',
+        value: discovery.serviceName,
+      },
+      serverVersion: {
+        type: 'property',
+        value: packageJSON.version,
+      },
+    };
+
+    const welcomeMessageString = 'o7\nWelcome to %serviceName% version %serverVersion%';
+
+    const log = formatLog(welcomeMessageObject, welcomeMessageString);
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+
+    this.creationMessage();
+  }
+
+  creationMessage() {
+    const { id } = this.config;
+
+    const creationMessageObject = {
+      serverID: {
+        type: 'name',
+        value: id,
+      },
+      creationDate: {
+        type: 'property',
+        value: this.creation.format('YYYY-MM-DD HH:mm:ss'),
+      },
+    };
+
+    const creationMessageString = 'Journal Server %serverID% created on %creationDate%';
+
+    const log = formatLog(creationMessageObject, creationMessageString);
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  listeningMessage() {
+    const { port } = this.config;
+
+    const listeningMessageObject = {
+      port: {
+        type: 'property',
+        value: port,
+      },
+    };
+
+    const listeningMessageString = 'Listening for Web Socket connections on port %port%...';
+
+    const log = formatLog(listeningMessageObject, listeningMessageString, 'info');
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  discoveryMessage() {
+    const { discovery } = this.config;
+
+    const discoveryMessageObject = {
+      serviceName: {
+        type: 'name',
+        value: discovery.serviceName,
+      },
+    };
+
+    const discoveryMessageString = 'Broadcasting service %serviceName% for discovery...';
+
+    const log = formatLog(discoveryMessageObject, discoveryMessageString, 'info');
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  clientConnectionMessage(identifier, connected = true) {
+    const connectionMessageObject = {
+      clientIdentifier: {
+        type: 'name',
+        value: identifier,
+      },
+    };
+
+    const connectionMessageString = `Client %clientIdentifier% ${(connected) ? 'connected to' : 'disconnected from'} Web Socket`;
+
+    const log = formatLog(connectionMessageObject, connectionMessageString, 'connection');
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+
+    this.totalClientsMessage();
+  }
+
+  totalClientsMessage() {
+    const { server } = this;
+
+    const totalClientsMessageObject = {
+      totalClients: {
+        type: 'property',
+        value: server.clients.size,
+      },
+    };
+
+    const totalclientsMessageString = 'Total clients: %totalClients%';
+
+    const log = formatLog(totalClientsMessageObject, totalclientsMessageString);
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  registrationMessage(client) {
+    const {
+      journalServerUUID: clientID,
+      journalServerClientName: clientName,
+    } = client;
+
+    const registrationMessageObject = {
+      clientID: {
+        type: 'name',
+        value: clientID,
+      },
+      clientName: {
+        type: 'name',
+        value: clientName,
+      },
+    };
+
+    const registrationMessageString = 'Client %clientID% registered as %clientName%';
+
+    const log = formatLog(registrationMessageObject, registrationMessageString, 'action');
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  subscriptionMessage(client) {
+    const {
+      journalServerUUID: clientID,
+      journalServerClientName: clientName,
+    } = client;
+
+    const subscriptionMessageObject = {
+      client: {
+        type: 'name',
+        value: clientName || clientID,
+      },
+    };
+
+    const subscriptionMessageString = 'Client %client% updated subscriptions';
+
+    const log = formatLog(subscriptionMessageObject, subscriptionMessageString, 'action');
+
+    this.emitter.emit(log);
+
+    console.log(log.chalked);
+  }
+
+  broadcastingMessage(broadcast) {
+    const { event, timestamp } = broadcast;
+
+    const broadcastingMessageObject = {
+      eventName: {
+        type: 'name',
+        value: event,
+      },
+      timestamp: {
+        type: 'property',
+        value: timestamp,
+      },
+    };
+
+    const broadcastingMessageString = 'Broadcasting event %eventName%:%timestamp%';
+
+    const log = formatLog(broadcastingMessageObject, broadcastingMessageString, 'action');
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  journalWatchingMessage(filepath, verb = 'watching for', current = true) {
+    if (path) {
+      const journalWatchingMessageObject = {
+        path: {
+          type: 'name',
+          value: filepath,
+        },
+      };
+
+      const journalWatchingMessageString = `${(current) ? 'Now' : 'No longer'} ${verb} changes to %path%...`;
+
+      const log = formatLog(journalWatchingMessageObject, journalWatchingMessageString, 'file');
+
+      this.emitter.emit('log', log);
+
+      console.log(log.chalked);
+    }
+  }
+
+  filePathMessage(filepath, msg) {
+    if (filepath && msg) {
+      const filePathMessageObject = {
+        path: {
+          type: 'name',
+          value: filepath,
+        },
+      };
+
+      const filePathMessageString = `${msg} %path%`;
+
+      const log = formatLog(filePathMessageObject, filePathMessageString, 'file');
+
+      this.emitter.emit('log', log);
+
+      console.log(log.chalked);
+    }
+  }
+
+  upTimeMessage() {
+    const { creation } = this;
+
+    const upTimeMessageObject = {
+      uptime: {
+        type: 'property',
+        value: moment().diff(creation, 'hours'),
+      },
+    };
+
+    const upTimeMessageString = 'Server uptime was %uptime% hours';
+
+    const log = formatLog(upTimeMessageObject, upTimeMessageString);
+
+    this.emitter.emit('log', log);
+
+    console.log(log.chalked);
+  }
+
+  shutdownMessage(msg, keys = {}) {
+    if (msg) {
+      const log = formatLog(keys, msg);
+
+      this.emitter.emit('log', log);
+
+      console.log(log.chalked);
+    }
   }
 }
 

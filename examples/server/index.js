@@ -1,5 +1,11 @@
 const EliteDangerousJournalServer = require('../../src/index.js');
 
-const JournalServer = new EliteDangerousJournalServer();
+const config = {
+  registration: {
+    enabled: true,
+  },
+};
+
+const JournalServer = new EliteDangerousJournalServer(config);
 
 JournalServer.init();

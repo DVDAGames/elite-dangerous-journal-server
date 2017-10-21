@@ -7,8 +7,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-*No unreleased changes*
+### Added
+- `EventEmitter` now emits several events from the Journal Server code
+- logging statements are now also exposed via events
+- logging statements are built from templates that allow defining variables and values
+- Added example client with registration
 
 ## [3.0.0]
 ### Added
