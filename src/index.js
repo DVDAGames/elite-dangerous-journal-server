@@ -287,6 +287,14 @@ class EliteDangerousJournalServer {
       socket.isReceiving = true;
     });
 
+    // handle socket errors
+    socket.on('error', (err) => {
+      // ignore that pesky ECONNRESET, socket will disconnect anyway, rethrow others
+      if (err.code !== 'ECONNRESET') {
+        throw err;
+      }
+    });
+
     // handle client disconnection
     socket.on('close', () => {
       // get client name if one exists
