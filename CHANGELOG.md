@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-*No unreleased changes*
+### Fixed
+- Ignore `ECONNRESET` error from WebSocket to prevent application crashing when
+it would normally just reconnect
 
 ## [3.0.0]
 ### Added

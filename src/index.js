@@ -290,9 +290,7 @@ class EliteDangerousJournalServer {
     // handle socket errors
     socket.on('error', (err) => {
       // ignore that pesky ECONNRESET, socket will disconnect anyway, rethrow others
-      if (err.code && (err.code === 'ECONNRESET')) {
-        console.log(`${chalk.cyan('Socket')} ${chalk.red('Ignoring ECONNRESET')}`);
-      } else {
+      if (err.code !== 'ECONNRESET') {
         throw err;
       }
     });
