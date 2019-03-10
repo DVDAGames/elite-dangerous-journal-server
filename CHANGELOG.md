@@ -8,11 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+*No unreleased changes*
+
+## [3.0.1] - 2019-03-10
 ### Fixed
 - Ignore `ECONNRESET` error from WebSocket to prevent application crashing when
 it would normally just reconnect
 
-## [3.0.0]
+## [3.0.0] - 2017-10-20
 ### Added
 - Added heartbeat pings between server and clients
 - Added ability for clients to register names
