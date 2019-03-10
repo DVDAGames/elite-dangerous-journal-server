@@ -193,7 +193,7 @@ class EliteDangerousJournalServer {
         // get client id
         const { journalServerUUID } = socket;
 
-        if (this.config.subsctions.enabled) {
+        if (this.config.subscriptions.enabled) {
           // remove client subscriptions
           this.clientSubscriptions = omit(this.clientSubscriptions, journalServerUUID);
         }
