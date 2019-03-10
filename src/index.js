@@ -458,7 +458,7 @@ class EliteDangerousJournalServer {
 
   /**
    * Normalizes provided data for transmission via WebSocket
-   * @param {any} data the data to format for transmission
+   * @param {any} payload the data to format for transmission
    * @param {Object} client the WebSocket client
    * @param {Boolean} [suppressHeaders=false] should we suppress our headers
    * @returns {String}
