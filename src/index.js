@@ -554,12 +554,12 @@ class EliteDangerousJournalServer {
     if (event === 'change' && filepath === this.currentJournal) {
       this.getJournalUpdate();
     } else {
-      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occured for`)} ${chalk.magenta(filepath)}`);
+      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occurred for`)} ${chalk.magenta(filepath)}`);
     }
   }
 
   /**
-   * Reads the JSON-lines conten from the Journal file and returns it as an Array
+   * Reads the JSON-lines content from the Journal file and returns it as an Array
    * @returns {Array}
    * @memberof EliteDangerousJournalServer
    */
