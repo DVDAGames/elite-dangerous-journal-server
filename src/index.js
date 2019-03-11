@@ -555,6 +555,16 @@ class EliteDangerousJournalServer {
       this.getJournalUpdate();
     } else {
       console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occurred for`)} ${chalk.magenta(filepath)}`);
+      const baseName = path.basename(filepath).toLowerCase();
+      if (baseName === 'status.json') {
+        const statusLines = fs.readFileSync(filepath, 'utf-8').split('\n').filter(item => item.trim());
+        if (statusLines && statusLines.length) {
+          const formattedStatus = JSON.parse(statusLines[0]);
+          if (formattedStatus) {
+            this.broadcast(formattedStatus);
+          }
+        }
+      }
     }
   }
 
