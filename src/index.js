@@ -23,7 +23,7 @@ const { formatClientName } = require('./utilities');
 
 // configuration
 const CONFIG = require('./defaults');
-const { EVENT_FOR_COMMANDER_NAME } = require('./constants');
+const { EVENT_FOR_COMMANDER_NAME, ANCILLARY_FILES } = require('./constants');
 
 
 /**
@@ -103,6 +103,12 @@ class EliteDangerousJournalServer {
     if (registration.enabled) {
       this.validMessageTypes.push(registration.messageType);
     }
+
+    this.ancillaryFiles = {};
+    ANCILLARY_FILES.forEach((filename) => {
+      const { base, name } = path.parse(filename);
+      this.ancillaryFiles[base.toLowerCase()] = { event: `X-${name}` };
+    });
   }
 
   /**
@@ -551,19 +557,26 @@ class EliteDangerousJournalServer {
    */
   journalEvent(event, filepath) {
     // make sure we're seeing a change to our current Journal
-    if (event === 'change' && filepath === this.currentJournal) {
-      this.getJournalUpdate();
-    } else {
-      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occurred for`)} ${chalk.magenta(filepath)}`);
-      const baseName = path.basename(filepath).toLowerCase();
-      if (baseName === 'status.json') {
-        const statusLines = fs.readFileSync(filepath, 'utf-8').split('\n').filter(item => item.trim());
-        if (statusLines && statusLines.length) {
-          const formattedStatus = JSON.parse(statusLines[0]);
-          if (formattedStatus) {
-            this.broadcast(formattedStatus);
-          }
-        }
+    if (event === 'change') {
+      if (filepath === this.currentJournal) {
+        this.getJournalUpdate();
+      } else {
+        this.getFileUpdate(filepath);
+      }
+    }
+  }
+
+  /**
+   * Reads changes to the stand-alone, ancillary files and broadcasts their content
+   * @param {String} filepath of the file that was modified
+   * @memberOf EliteDangerousJournalServer
+   */
+  getFileUpdate(filepath) {
+    const baseName = path.basename(filepath).toLowerCase();
+    if (this.ancillaryFiles[baseName]) {
+      const parsedEvent = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+      if (parsedEvent) {
+        this.broadcast(Object.assign({}, parsedEvent, this.ancillaryFiles[baseName]));
       }
     }
   }
