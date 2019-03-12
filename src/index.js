@@ -193,7 +193,7 @@ class EliteDangerousJournalServer {
         // get client id
         const { journalServerUUID } = socket;
 
-        if (this.config.subsctions.enabled) {
+        if (this.config.subscriptions.enabled) {
           // remove client subscriptions
           this.clientSubscriptions = omit(this.clientSubscriptions, journalServerUUID);
         }
@@ -458,7 +458,7 @@ class EliteDangerousJournalServer {
 
   /**
    * Normalizes provided data for transmission via WebSocket
-   * @param {any} data the data to format for transmission
+   * @param {any} payload the data to format for transmission
    * @param {Object} client the WebSocket client
    * @param {Boolean} [suppressHeaders=false] should we suppress our headers
    * @returns {String}
@@ -554,12 +554,12 @@ class EliteDangerousJournalServer {
     if (event === 'change' && filepath === this.currentJournal) {
       this.getJournalUpdate();
     } else {
-      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occured for`)} ${chalk.magenta(filepath)}`);
+      console.log(`${chalk.green(`Filesystem event ${chalk.red(event)} occurred for`)} ${chalk.magenta(filepath)}`);
     }
   }
 
   /**
-   * Reads the JSON-lines conten from the Journal file and returns it as an Array
+   * Reads the JSON-lines content from the Journal file and returns it as an Array
    * @returns {Array}
    * @memberof EliteDangerousJournalServer
    */
