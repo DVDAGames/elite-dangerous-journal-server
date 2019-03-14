@@ -20,6 +20,13 @@ const JOURNAL_SERVER_PORT = 31337;
 const JOURNAL_DIR = join(homedir(), 'Saved Games', 'Frontier Developments', 'Elite Dangerous');
 
 /**
+ * List of ancillary files to also include in the event broadcast
+ * @type {Array}
+ */
+
+const ANCILLARY_FILES = ['Cargo.json', 'Market.json', 'ModulesInfo.json', 'Outfitting.json', 'Shipyard.json', 'Status.json'];
+
+/**
  * Default Journal Event subscription list for clients
  * @type {Array}
  */
@@ -148,6 +155,7 @@ module.exports = {
   JOURNAL_DIR,
   JOURNAL_FILE_REGEX,
   JOURNAL_WATCH_INTERVAL,
+  ANCILLARY_FILES,
 
   // heartbeat
   SERVER_HEARTBEAT_INTERVAL,
