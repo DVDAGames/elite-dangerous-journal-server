@@ -30,7 +30,7 @@ by passing the desired event names as an Array to the server. There is an exampl
 Journal Server so that users don't have to install Node or run scripts in a Terminal.
 
 If you're building something with `@dvdagames/elite-dangerous-journal-server` please let us know or submit a
-[Pull Request](https://github.com/DVDAGames/elite-dangerous-journal-server/pulls) adding your project to this list. 
+[Pull Request](https://github.com/DVDAGames/elite-dangerous-journal-server/pulls) adding your project to this list.
 
 
 ## Contributors
@@ -257,3 +257,5 @@ and discussions
 including `fs.watch()` issues with the Journals and using Bonjour for Network Discovery
 - [Frontier Forums Elite Dangerous Journal Discussion](https://forums.frontier.co.uk/showthread.php/275151-Commanders-log-manual-and-data-sample)
 for providing some info about what's in these files and how they work
+- [CMDR rolandbosa](https://github.com/rolandbosa) for adding some necessary new
+functionality long after I was no longer able to play the game

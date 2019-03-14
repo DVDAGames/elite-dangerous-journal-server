@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+*No unreleased changes*
+
+## [3.1.0] - 2019-03-13
+### Added
 - Added broadcasting of the contents of ancillary files (e.g. `Status.json`) as events
+
+### Housekeeping
+- Fixed several misspelled words throughout the project
 
 ## [3.0.1] - 2019-03-10
 ### Fixed
