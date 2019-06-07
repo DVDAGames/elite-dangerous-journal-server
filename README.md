@@ -84,15 +84,15 @@ This parameter can take on two different forms:
   - **subscribeTo**: `[Array]: ["ALL"]` what events to subscribe clients to by default; an empty Array (`[]`) will suppress all broadcasts unless subscribed to directly
   - **messageType**: `[String]: "subscribe"` what should the client use for the `type` in their message when updating subscriptions
 - **errors**: `[Object]` config for error messages to client; each error is an `Object` with a `message` and status `code` property
-    **mustRegister**: `[Object]` config for registration required error
-      - **message**: `[String]: "Client must register with server"`
-      - **code**: `[Number]: 401`
-    **invalidMessage**: `[Object]` config for invalid message type error
-      - **message**: `[String]: "Server does not accept message type"`
-      - **code**: `[Number]: 403`
-    **invalidPayload**: `[Object]` config for invalid payload error
-      - **message**: `[String]: "Server does not accept payload"`
-      - **code**: `[Number]: 400`
+  - **mustRegister**: `[Object]` config for registration required error
+    - **message**: `[String]: "Client must register with server"`
+    - **code**: `[Number]: 401`
+  - **invalidMessage**: `[Object]` config for invalid message type error
+    - **message**: `[String]: "Server does not accept message type"`
+    - **code**: `[Number]: 403`
+  - **invalidPayload**: `[Object]` config for invalid payload error
+    - **message**: `[String]: "Server does not accept payload"`
+    - **code**: `[Number]: 400`
 - **headers**: `[Object]` an optional Object of arbitraty headers you'd like added to the broadcast;
 these properties will exist in the broadcast data outside of the `payload` property which
 will contain the Journal Event
@@ -183,15 +183,15 @@ the Journal Server
   - The `payload` property will be the current Journal's header when clients's register
   or update subscriptions.
   - The `payload` property will be an Error Object like the following when there is an issue:
-  ```json
-  {
-    payload: {
-      error: true,
-      message: 'Client must register with Server',
-      code: 401
-    }
-  }
-  ```
+   ```json
+   {
+     "payload": {
+       "error": true,
+       "message": "Client must register with Server",
+       "code": 401
+     }
+   }
+   ```
   - The `payload` property should contain the JSON-lines Object for the current Journal
   Event in all other cases
 
