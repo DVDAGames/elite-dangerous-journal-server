@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 *No unreleased changes*
 
-## [3.1.1] - 2019-07-16
+## [3.2.0] - 2019-07-16
 ### Fixed
 - Added error handling for situations where the entire `status.json` file is not
 yet written to disk and we try to access it, which would result in a crash due to
