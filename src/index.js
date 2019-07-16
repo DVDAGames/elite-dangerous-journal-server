@@ -574,9 +574,20 @@ class EliteDangerousJournalServer {
   getFileUpdate(filepath) {
     const baseName = path.basename(filepath).toLowerCase();
     if (this.ancillaryFiles[baseName]) {
-      const parsedEvent = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
-      if (parsedEvent) {
-        this.broadcast(Object.assign({}, parsedEvent, this.ancillaryFiles[baseName]));
+      try {
+        const parsedEvent = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+        if (parsedEvent) {
+          this.broadcast(Object.assign({}, parsedEvent, this.ancillaryFiles[baseName]));
+        }
+      }
+      catch (err) {
+        /* If the file is in the middle of being flushed to disk, we can
+         * get 'SyntaxError: Unexpected end of JSON input' in JSON.parse().
+         */
+        if (err.name != 'SyntaxError') {
+          throw err;
+        }
+        console.log(`${chalk.red('Ignoring error:')} ${chalk.magenta(err)}`);
       }
     }
   }
