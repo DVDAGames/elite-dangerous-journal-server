@@ -10,9 +10,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 *No unreleased changes*
 
+## [3.1.1] - 2019-07-16
+### Fixed
+- Added error handling for situations where the entire `status.json` file is not
+yet written to disk and we try to access it, which would result in a crash due to
+attempting to parse improperly formatted JSON.
+
 ## [3.1.0] - 2019-03-13
 ### Added
-- Added broadcasting of the contents of ancillary files (e.g. `Status.json`) as events
+- Added broadcasting of the contents of ancillary files (e.g. `status.json`) as events
 
 ### Housekeeping
 - Fixed several misspelled words throughout the project
